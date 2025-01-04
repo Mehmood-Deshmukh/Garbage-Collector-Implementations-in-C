@@ -253,7 +253,8 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
         metadata.size = size;
         metadata.marked = 0;
 
-        gc_add_block(block, metadata); // mapping the block to its metadata
+        gc_add_block(block, metadata); /* mapping the block to its metadata */
+        gc.add_root(block); /* adding the block to the root set */
 
         return block;
     }
@@ -337,3 +338,37 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
     - In contrast, the sweep phase will visit all the objects in the heap.
 
 5. **The Sweep Phase**
+    - Since we marked the objects in the mark phase, we can now sweep the heap and deallocate the unmarked objects.
+    - The `gc_sweep()` function will look like this:
+    ```c
+    void gc_sweep(){
+        map m = gc_get_objects();
+        for(int i = 0; i < m.size; i++){
+            void *object = m.objects[i];
+            Metadata *metadata = gc_get_metadata(object);
+            if(!metadata->marked){
+                gc_remove_block(object);
+                free(object);
+            }
+        }
+    }
+    ```
+    - The `gc_get_objects()` function will return all the objects in the heap. 
+    - The `gc_remove_block()` function will remove the block from the mapping.
+    - In the sweep phase, we visit all the objects in the heap and deallocate the unmarked objects who have the `marked` field set to 0.
+    - The graph after the sweep phase will look like this:<br>
+    <img src="./References/Images/04 - Swept Graph.png" width="400">
+
+    - The `gc_dump()` function will print the graph in the following format:
+    ```
+    Swept Graph
+
+    {
+        [B] 0x7f8c1b401fb0 : {marked: 0, size: 16},
+        [A] 0x7f8c1b401fa0 : {marked: 0, size: 16},
+    }
+    ```
+
+    ### And that's it for the basic implementation of the mark and sweep algorithm!
+
+
