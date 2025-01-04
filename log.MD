@@ -371,4 +371,64 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
     ### And that's it for the basic implementation of the mark and sweep algorithm!
 
+### C specific steps to implement the garbage collector
+
+1. The `gc_get_children()` function
+    - This function will return all the children pointers of an object.
+    - The idea we will use here is to scan the memory of the object and find all the pointers.
+    - We will use the duck test to determine if a memory location is a pointer.
+    - Here is the implementation of the function:
+    ```c
+    map gc_get_children(void *object){
+        map m;
+        Metadata *metadata = gc_get_metadata(object);
+        size_t size = metadata->size;
+
+        for(int i = 0; i < size; i++){
+            uint8_t *p = (uint8_t *)object + i;
+            if(gc_contains((uintptr_t *)*(uintptr_t *)p)){
+                m.objects[m.size++] = *(uintptr_t *)p;
+            }
+        }
+
+        return m;
+    }
+    ```
+    - The `gc_contains()` function will check if the memory location is in the set of allocated objects.
+    - The `gc_get_metadata()` function will return the metadata of the object.
+    - Reason for using `uintptr_t` is that it guarantees that it is large enough to hold a pointer. for example, on a 64-bit system, it will be 8 bytes and on a 32-bit system, it will be 4 bytes.
+
+2. The `gc_get_roots()` function
+    - This function will return all the roots.
+    - The roots are the starting points from which we begin our tracing algorithm.
+    - In C, we must manually scan the stack to find the roots
+    - We have already discussed about it in the previous logs.
+    - But to push the registers to the stack, we can use the following code:
+    ```c
+    jmp_buf jb;
+    setjmp(jb);
+    ```
+    - This will push the registers to the stack.
+    - We can then scan the stack to find the roots.
+    - The `gc_get_roots()` function will look like this:
+    ```c
+    map gc_get_roots(){
+        map m;
+        uint8_t *stack_top = (uint8_t *)gc.stack_top;
+        uint8_t *stack_bottom = __rsp;
+
+        while(stack_bottom < stack_top){
+            if(gc_contains((uintptr_t *)*(uintptr_t *)stack_bottom)){
+                m.objects[m.size++] = *(uintptr_t *)stack_bottom;
+            }
+            stack_bottom++;
+        }
+
+        return m;
+    }
+    ```
+    - The `gc.stack_top` is the top of the stack, which we got using the `__builtin_frame_address(1)` function, which we will use in the `gc_init()` function.
+
+### That's it for the basic implementation of the garbage collector in C!
+### Now I will start implementing the basic mark and sweep garbage collector in C, we can later improve it by adding more features or using different algorithms.
 
