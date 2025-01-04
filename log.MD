@@ -120,3 +120,220 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
 - In C, we must manually scan the stack to find the roots.
 - additionally, some objects might be stored in registers, so we need to scan the registers as well. we can use some tricks to push the registers to the stack and then scan the stack.
+
+**Date : 4 January 2025 02:50 PM**
+
+### Let's take a look at the algorithm with an example
+
+1. **The Traceable Object**
+    - This will be the most important part of our implementation.
+    - This will contain all the information about the object, which will be used by the garbage collector.
+    - But for now for now we will just have a simple structure. This example is take from Dmitry Soshnikov's blog, with a few modifications.
+    ```c
+    typedef struct Traceable {
+        char *name;
+
+        Node  *left;
+        Node  *right;
+    } Traceable;
+    ```
+    - The mark and sweep algorithm has two phases: `The Mark Phase`(marking all the reachable objects) and `The Sweep Phase`(deallocating the unreachable objects).
+    - The `left` and `right` fields are pointers to other objects.
+    - For that we need a flag. This is where the `marked` flag comes in.
+    - The `size` field is used to store the size of the object.
+    - we can store these metadata in the object itself, but it is not a good practice. So we will store it in a separate structure.
+    ```c
+    typedef struct Metadata {
+        int marked;
+        size_t size;
+    } Metadata;
+    ```
+
+    - We can maintain a mapping of the object to its metadata using a hash table or a linked list.
+
+2. **The example**
+
+    - Here's a graph for example
+
+    ```c
+    /* This function will create the following graph
+        a
+       / \
+      b   c
+         / \
+        d   e
+           / \
+          f   g
+               \
+                h
+    */
+
+    Node *createGraph(){
+        Node *a = malloc(sizeof(Node));
+        Node *b = malloc(sizeof(Node));
+        Node *c = malloc(sizeof(Node));
+        Node *d = malloc(sizeof(Node));
+        Node *e = malloc(sizeof(Node));
+        Node *f = malloc(sizeof(Node));
+        Node *g = malloc(sizeof(Node));
+        Node *h = malloc(sizeof(Node));
+
+        a->left = b;
+        a->right = c;
+
+        c->left = d;
+        c->right = e;
+
+        e->left = f;
+        e->right = g;
+
+        g->right = h;
+
+        return a;
+    }
+    ```
+    - Now we will create a graph using the above function in the main function.
+    ```c
+    int main(){
+        gc_init();
+        Node *a = createGraph();
+        gc_dump("Allocated Graph");
+        return 0;
+    }
+    ```
+    - Notice that we have called `gc_init()` function. This function will initialize the garbage collector, we will look into its implementation later.
+    - The `gc_dump()` function will print the graph we created.
+
+    - Now let's take a look at the graph we created.<br>
+    <img src="./References/Images/01 - Allocated Graph.png" width="400">
+
+    - Initially, we only have the reference to the root node `a`. We don't know anything else about the sub-nodes of `a`.
+    
+    - The `gc_dump()` function will print the graph in the following format:
+    ```
+    Allocated Graph
+
+    {
+        [H] 0x7f8c1b402010 : {marked: 0, size: 16},
+        [G] 0x7f8c1b402000 : {marked: 0, size: 16},
+        [F] 0x7f8c1b401ff0 : {marked: 0, size: 16},
+        [E] 0x7f8c1b401fe0 : {marked: 0, size: 16},
+        [D] 0x7f8c1b401fd0 : {marked: 0, size: 16},
+        [C] 0x7f8c1b401fc0 : {marked: 0, size: 16},
+        [B] 0x7f8c1b401fb0 : {marked: 0, size: 16},
+        [A] 0x7f8c1b401fa0 : {marked: 0, size: 16},
+    }
+    ``` 
+
+    - The addresses here are not the actual addresses, they are just for representation.
+    - The `marked` field is set to 0, which means that the object is not marked. This is because we haven't started the mark phase yet.
+
+    ### What is Garbage?
+    - From the viewpoint of a tracing garbage collector, garbage is any object that is not reachable from the root set of objects.
+
+    - Let's see that in our example.
+    - Suppose we perform the following operation:
+    ```c
+    a->right = NULL;
+    ```
+    - This single operation will make the entire right subtree Garbage.
+    - **Note** : It is garbage in a garbage collector's perspective. In pure C, it is a **memory leak.**<br>
+    <img src="./References/Images/02 - Garbage Right Subtree.png" width="400">
+
+3. **Custom Memory Allocator**
+    - We will implement a custom memory allocator for our garbage collector.
+    - But it will be a simple wrapper around the `malloc()` function.
+
+    ```c
+    void *gc_malloc(size_t size){
+        void *block = malloc(size);
+
+        void *metadata = malloc(sizeof(Metadata));
+
+        metadata.size = size;
+        metadata.marked = 0;
+
+        gc_add_block(block, metadata); // mapping the block to its metadata
+
+        return block;
+    }
+    ```
+
+    - We can also have a implementation where we store the metadata in the block itself. in that case we will allocate `size + sizeof(Metadata)` bytes of memory.
+    - to lookup the metadata, we will just subtract `sizeof(Metadata)` from the block address.
+    - Reference: [Garbage Collector in C](https://github.com/sameerkavthekar/garbage-collector)
+
+4. **The Mark Phase**
+
+    - In the main function, we will call the `gc_run()` function.
+    ```c
+    int main(){
+        gc_init();
+        Node *a = createGraph();
+        gc_dump("Allocated Graph");
+        a->right = NULL;
+        gc_run();
+
+        return 0;
+    }
+    ```
+    - The `gc_run()` function will look like this:
+    ```c
+    void gc_run(){
+        gc_mark();
+        gc_dump("Marked Graph");
+
+        gc_sweep();
+        gc_dump("Swept Graph");
+    }
+    ```
+    - we will dump the graph after the mark phase and after the sweep phase, to see the changes.
+
+    - The `gc_mark()` function will look like this:
+    ```c
+    void gc_mark(){
+        map m = gc_get_roots();
+        for(int i = 0; i < m.size; i++){
+            gc_mark_object(m.objects[i]);
+        }
+    }
+
+    void gc_mark_object(void *object){
+        Metadata *metadata = gc_get_metadata(object);
+        if(metadata->marked) return;
+
+        metadata->marked = 1;
+
+        map m = gc_get_children(object);
+        for(int i = 0; i < m.size; i++){
+            gc_mark_object(m.objects[i]);
+        }
+    }
+
+    ```
+    - we start from the roots and mark all the reachable objects. for each object, we get its children and mark them as well. and so on.
+    - By the end of the mark phase, all the reachable objects will be marked. the unreachable objects will have the `marked` field set to 0.
+    - The `gc_get_roots()` function and `gc_get_children()` function will be implemented later.
+    - The graph after the mark phase will look like this:<br>
+    <img src="./References/Images/03 - Marked Graph.png" width="400">
+
+    - The `gc_dump()` function will print the graph in the following format:
+    ```
+    marked Graph
+
+    {
+        [H] 0x7f8c1b402010 : {marked: 0, size: 16},
+        [G] 0x7f8c1b402000 : {marked: 0, size: 16},
+        [F] 0x7f8c1b401ff0 : {marked: 0, size: 16},
+        [E] 0x7f8c1b401fe0 : {marked: 0, size: 16},
+        [D] 0x7f8c1b401fd0 : {marked: 0, size: 16},
+        [C] 0x7f8c1b401fc0 : {marked: 0, size: 16},
+        [B] 0x7f8c1b401fb0 : {marked: 1, size: 16},
+        [A] 0x7f8c1b401fa0 : {marked: 1, size: 16},
+    }
+    ```
+    - Marking will not reclaim the memory, it will just mark the objects. 
+    - This is a relatively faster process as we visit a subset of the objects that are reachable.
+    - In contrast, the sweep phase will visit all the objects in the heap.
+
+5. **The Sweep Phase**
