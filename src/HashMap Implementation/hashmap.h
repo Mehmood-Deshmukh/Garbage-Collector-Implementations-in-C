@@ -1,3 +1,6 @@
+#ifndef HASHMAP_H
+#define HASHMAP_H
+
 #include <stdint.h>
 
 /*
@@ -128,3 +131,5 @@ int hashmap_iterator_next(HashMapIterator *iter, uintptr_t *key, uintptr_t *valu
     returns : void
 */
 void hashmap_iterator_free(HashMapIterator *iter);
+
+#endif

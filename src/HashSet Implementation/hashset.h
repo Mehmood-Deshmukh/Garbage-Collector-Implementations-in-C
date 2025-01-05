@@ -1,3 +1,6 @@
+#ifndef HASHSET_H
+#define HASHSET_H
+
 #include <stdint.h>
 
 
@@ -114,3 +117,5 @@ uintptr_t hashset_iterator_next(HashSetIterator *iter);
     returns : void
 */
 void hashset_iterator_free(HashSetIterator *iter);
+
+#endif /* HASHSET_H */

@@ -873,4 +873,6 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
 **Date: 5 January 2025 12:34 PM** 
 
-- Done with adding tests for HashMap and HashSet Implementation.
+- Done with adding tests and comments for HashMap and HashSet Implementation.
+
+### Now I will start implementing the basic mark and sweep garbage collector in C!
