@@ -13,10 +13,10 @@ uint32_t ROTL32(uint32_t x, int y);
 
 
 void hashmap_init(HashMap *map){
-    map->buckets = malloc(SIZE * sizeof(HashMapNode *));
-    map->size = SIZE;
+    map->buckets = malloc(HASHMAP_SIZE * sizeof(HashMapNode *));
+    map->size = HASHMAP_SIZE;
 
-    for(int i = 0; i < SIZE; i++){
+    for(int i = 0; i < HASHMAP_SIZE; i++){
         map->buckets[i] = NULL;
     }
 }
@@ -92,6 +92,10 @@ uint32_t ROTL32(uint32_t x, int y) {
 }
 
 void hashmap_insert(HashMap *map, uintptr_t key, uintptr_t value){
+    if(hashmap_lookup(map, key)){
+        hashmap_delete(map, key);
+    }
+    
     uintptr_t index = hash(key, map->size);
 
     HashMapNode *node = malloc(sizeof(HashMapNode));

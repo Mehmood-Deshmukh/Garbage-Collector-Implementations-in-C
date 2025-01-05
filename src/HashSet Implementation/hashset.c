@@ -11,10 +11,10 @@ uint32_t getblock32(const uint32_t *p, int i);
 uint32_t ROTL32(uint32_t x, int y);
 
 void hashset_init(HashSet *set){
-    set->buckets = malloc(SIZE * sizeof(HashSetNode *));
-    set->size = SIZE;
+    set->buckets = malloc(HASHSET_SIZE * sizeof(HashSetNode *));
+    set->size = HASHSET_SIZE;
 
-    for(int i = 0; i < SIZE; i++){
+    for(int i = 0; i < HASHSET_SIZE; i++){
         set->buckets[i] = NULL;
     }
 }

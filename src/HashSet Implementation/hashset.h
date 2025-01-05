@@ -175,7 +175,7 @@ typedef struct HashSetIterator {
     HashSetNode *node;
 } HashSetIterator;
 
-#define SIZE 100
+#define HASHSET_SIZE 100
 
 void hashset_init(HashSet *set);
 void hashset_insert(HashSet *set, uintptr_t key);

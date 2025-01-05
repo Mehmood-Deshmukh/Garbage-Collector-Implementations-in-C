@@ -17,10 +17,11 @@ typedef struct HashMapIterator {
     HashMapNode *node;
 } HashMapIterator;
 
-#define SIZE 100
+#define HASHMAP_SIZE 100
 
 void hashmap_init(HashMap *map);
 void hashmap_insert(HashMap *map, uintptr_t key, uintptr_t value);
+void hashmap_delete(HashMap *map, uintptr_t key);
 uintptr_t hashmap_lookup(HashMap *map, uintptr_t key);
 void hashmap_free(HashMap *map);
 

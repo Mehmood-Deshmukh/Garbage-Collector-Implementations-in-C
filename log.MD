@@ -571,11 +571,11 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
     2. HashMap Initialization
         - The `hashmap_init()` function will initialize the hashmap.
         ```c
-        void hashmap_init(HashMap *map, int SIZE){
-            map->buckets = malloc(SIZE * sizeof(Node *));
-            map->size = SIZE;
+        void hashmap_init(HashMap *map){
+            map->buckets = malloc(HASHMAP_SIZE * sizeof(Node *));
+            map->size = HASHMAP_SIZE;
 
-            for(int i = 0; i < SIZE; i++){
+            for(int i = 0; i < HASHMAP_SIZE; i++){
                 map->buckets[i] = NULL;
             }
         }
@@ -738,10 +738,10 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
         - The `hashset_init()` function will initialize the hashset.
         ```c
         void hashset_init(HashSet *set){
-            set->buckets = malloc(SIZE * sizeof(HashSetNode *));
-            set->size = SIZE;
+            set->buckets = malloc(HASHSET_SIZE * sizeof(HashSetNode *));
+            set->size = HASHSET_SIZE;
 
-            for(int i = 0; i < SIZE; i++){
+            for(int i = 0; i < HASHSET_SIZE; i++){
                 set->buckets[i] = NULL;
             }
         }
@@ -868,3 +868,5 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
         }
         ```
 ### That's it for the HashSet implementation in C!
+
+**TO DO** : Add comments in the HashMap and HashSet Implementation, and write tests for them.
