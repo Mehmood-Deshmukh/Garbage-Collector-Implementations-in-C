@@ -8,8 +8,8 @@ uint32_t murmurhash3_x86_32(const void *key, size_t len, uint32_t seed);
 uint32_t getblock32(const uint32_t *p, int i);
 uint32_t ROTL32(uint32_t x, int y);
 
-uintptr_t hash(uintptr_t key, int size) {
-    return murmur_hash3(key) % size;
+uintptr_t hash(uintptr_t *key, int size) {
+    return murmur_hash3((uintptr_t)key) % size;
 }
 
 uintptr_t murmur_hash3(uintptr_t key) {

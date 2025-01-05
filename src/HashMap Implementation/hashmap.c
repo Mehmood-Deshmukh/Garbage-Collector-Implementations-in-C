@@ -13,7 +13,7 @@ void hashmap_init(HashMap *map){
     }
 }
 
-void hashmap_insert(HashMap *map, uintptr_t key, uintptr_t value){
+void hashmap_insert(HashMap *map, uintptr_t *key, uintptr_t *value){
     if(hashmap_lookup(map, key)){
         hashmap_delete(map, key);
     }
@@ -27,7 +27,7 @@ void hashmap_insert(HashMap *map, uintptr_t key, uintptr_t value){
     map->buckets[index] = node;
 }
 
-uintptr_t hashmap_lookup(HashMap *map, uintptr_t key){
+uintptr_t *hashmap_lookup(HashMap *map, uintptr_t *key){
     uintptr_t index = hash(key, map->size);
 
     HashMapNode *node = map->buckets[index];
@@ -38,10 +38,10 @@ uintptr_t hashmap_lookup(HashMap *map, uintptr_t key){
         node = node->next;
     }
 
-    return 0;
+    return NULL;
 }
 
-void hashmap_delete(HashMap *map, uintptr_t key){
+void hashmap_delete(HashMap *map, uintptr_t *key){
     uintptr_t index = hash(key, map->size);
 
     HashMapNode *node = map->buckets[index];
@@ -101,8 +101,8 @@ int hashmap_iterator_has_next(HashMapIterator *iter){
 int hashmap_iterator_next(HashMapIterator *iter, uintptr_t *key, uintptr_t *value){
     if(!hashmap_iterator_has_next(iter)) return 0;
 
-    *key = iter->node->key;
-    *value = iter->node->value;
+    key = iter->node->key;
+    value = iter->node->value;
 
     iter->node = iter->node->next;
     if(!iter->node){

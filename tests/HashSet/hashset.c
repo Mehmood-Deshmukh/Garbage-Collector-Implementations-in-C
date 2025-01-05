@@ -14,7 +14,7 @@ void hashset_init(HashSet *set){
 }
 
 
-void hashset_insert(HashSet *set, uintptr_t key){
+void hashset_insert(HashSet *set, uintptr_t *key){
     if(hashset_lookup(set, key)) return;
 
     uintptr_t index = hash(key, set->size);
@@ -25,7 +25,7 @@ void hashset_insert(HashSet *set, uintptr_t key){
     set->buckets[index] = node;
 }
 
-int hashset_lookup(HashSet *set, uintptr_t key){
+int hashset_lookup(HashSet *set, uintptr_t *key){
     uintptr_t index = hash(key, set->size);
 
     HashSetNode *node = set->buckets[index];
@@ -39,7 +39,7 @@ int hashset_lookup(HashSet *set, uintptr_t key){
     return 0;
 }
 
-void hashset_delete(HashSet *set, uintptr_t key){
+void hashset_delete(HashSet *set, uintptr_t *key){
     uintptr_t index = hash(key, set->size);
 
     HashSetNode *node = set->buckets[index];
@@ -96,10 +96,10 @@ int hashset_iterator_has_next(HashSetIterator *iter){
     return iter->node != NULL;
 }
 
-uintptr_t hashset_iterator_next(HashSetIterator *iter){
+uintptr_t *hashset_iterator_next(HashSetIterator *iter){
     if(!hashset_iterator_has_next(iter)) return 0;
 
-    uintptr_t key = iter->node->key;
+    uintptr_t *key = iter->node->key;
 
     iter->node = iter->node->next;
     if(!iter->node){

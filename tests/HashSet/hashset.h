@@ -10,7 +10,7 @@ Each node contains a key, value and a pointer to the next node in the chain.
 */
 
 typedef struct HashSetNode {
-    uintptr_t key;
+    uintptr_t *key;
     struct HashSetNode *next;
 } HashSetNode;
 
@@ -55,28 +55,28 @@ void hashset_init(HashSet *set);
     function : hashset_insert
     purpose : insert a key into the hashmap
     parameters : HashSet *set - pointer to the hashmap
-                 uintptr_t key - key to insert
+                 uintptr_t *key - key to insert
     returns : void
 */
-void hashset_insert(HashSet *set, uintptr_t key);
+void hashset_insert(HashSet *set, uintptr_t *key);
 
 /*
     function : hashset_lookup
     purpose : lookup a key in the hashmap
     parameters : HashSet *set - pointer to the hashmap
-                 uintptr_t key - key to lookup
+                 uintptr_t *key - key to lookup
     returns : int - 1 if the key is found, 0 otherwise
 */
-int hashset_lookup(HashSet *set, uintptr_t key);
+int hashset_lookup(HashSet *set, uintptr_t *key);
 
 /*
     function : hashset_delete
     purpose : delete a key from the hashmap
     parameters : HashSet *set - pointer to the hashmap
-                 uintptr_t key - key to delete
+                 uintptr_t *key - key to delete
     returns : void
 */
-void hashset_delete(HashSet *set, uintptr_t key);
+void hashset_delete(HashSet *set, uintptr_t *key);
 
 /*
     function : hashset_free
@@ -108,7 +108,7 @@ int hashset_iterator_has_next(HashSetIterator *iter);
     parameters : HashSetIterator *iter - pointer to the iterator
     returns : uintptr_t - the next element
 */
-uintptr_t hashset_iterator_next(HashSetIterator *iter);
+uintptr_t *hashset_iterator_next(HashSetIterator *iter);
 
 /*
     function : hashset_iterator_free

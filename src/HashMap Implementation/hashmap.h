@@ -19,8 +19,8 @@ Each node contains a key, value and a pointer to the next node in the chain.
 */
 
 typedef struct HashMapNode {
-    uintptr_t key;
-    uintptr_t value;
+    uintptr_t *key;
+    uintptr_t *value;
     struct HashMapNode *next;
 } HashMapNode; 
 
@@ -66,29 +66,29 @@ void hashmap_init(HashMap *map);
     function : hashmap_insert
     purpose : insert a key-value pair into the hashmap
     parameters : HashMap *map - pointer to the hashmap
-                 uintptr_t key - key to insert
-                 uintptr_t value - value to insert
+                 uintptr_t *key - key to insert
+                 uintptr_t *value - value to insert
     returns : void
 */
-void hashmap_insert(HashMap *map, uintptr_t key, uintptr_t value);
+void hashmap_insert(HashMap *map, uintptr_t *key, uintptr_t *value);
 
 /*
     function : hashmap_delete
     purpose : delete a key from the hashmap
     parameters : HashMap *map - pointer to the hashmap
-                 uintptr_t key - key to delete
+                 uintptr_t *key - key to delete
     returns : void
 */
-void hashmap_delete(HashMap *map, uintptr_t key);
+void hashmap_delete(HashMap *map, uintptr_t *key);
 
 /*
     function : hashmap_lookup
     purpose : lookup a key in the hashmap
     parameters : HashMap *map - pointer to the hashmap
-                 uintptr_t key - key to lookup
-    returns : uintptr_t - value associated with the key
+                 uintptr_t *key - key to lookup
+    returns : uintptr_t *- value associated with the key
 */
-uintptr_t hashmap_lookup(HashMap *map, uintptr_t key);
+uintptr_t *hashmap_lookup(HashMap *map, uintptr_t *key);
 
 /*
     function : hashmap_free

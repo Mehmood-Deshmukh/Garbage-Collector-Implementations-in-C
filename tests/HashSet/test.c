@@ -3,7 +3,7 @@
 #include<stdint.h>
 #include "hashset.h"
 
-uintptr_t hash(uintptr_t key, int size);
+uintptr_t hash(uintptr_t *key, int size);
 
 void print_test_result(char *test_name, int result);
 void assert_equal(uintptr_t expected, uintptr_t actual, char *error_message);
@@ -60,7 +60,7 @@ void test_init(){
 void test_insert_and_lookup(){
     HashSet set;
     hashset_init(&set);
-    uintptr_t key = 0x7ff000000000;
+    uintptr_t *key = (uintptr_t *)0x7ff000000000;
     hashset_insert(&set, key);
     int result = hashset_lookup(&set, key);
     assert_equal(1, result, "Key should be found");
@@ -71,13 +71,13 @@ void test_multiple_inserts(){
     HashSet set;
     hashset_init(&set);
     int n = 100;
-    uintptr_t base_address = 0x7ff000000000;
+    uintptr_t *base_address = (uintptr_t *)0x7ff000000000;
     for(int i = 0; i < n; i++){
-        uintptr_t key = base_address + i;
+        uintptr_t *key = base_address + i;
         hashset_insert(&set, key);
     }
     for(int i = 0; i < n; i++){
-        uintptr_t key = base_address + i;
+        uintptr_t *key = base_address + i;
         int result = hashset_lookup(&set, key);
         assert_equal(1, result, "Key should be found");
     }
@@ -88,7 +88,7 @@ void test_multiple_inserts(){
 void test_update(){
     HashSet set;
     hashset_init(&set);
-    uintptr_t key = 0x7ff000000000;
+    uintptr_t *key = (uintptr_t *)0x7ff000000000;
     hashset_insert(&set, key);
     int result = hashset_lookup(&set, key);
     assert_equal(1, result, "Key should be found");
@@ -104,16 +104,16 @@ void test_iterator(){
     HashSet set;
     hashset_init(&set);
     int n = 100;
-    uintptr_t base_address = 0x7ff000000000;
+    uintptr_t *base_address = (uintptr_t *)0x7ff000000000;
     for(int i = 0; i < n; i++){
-        uintptr_t key = base_address + i;
+        uintptr_t *key = base_address + i;
         hashset_insert(&set, key);
     }
 
     HashSetIterator *iter = hashset_iterator_create(&set);
     int count = 0;
     while(hashset_iterator_has_next(iter)){
-        uintptr_t key = hashset_iterator_next(iter);
+        uintptr_t *key = hashset_iterator_next(iter);
         int result = hashset_lookup(&set, key);
         assert_equal(1, result, "Key should be found");
         count++;
@@ -124,12 +124,12 @@ void test_iterator(){
 }
 
 void test_collision_handling(){
-    uintptr_t base = 0x7ff000000000;
+    uintptr_t *base = (uintptr_t *)0x7ff000000000;
     uintptr_t  base_hash = hash(base, HASHSET_SIZE);
     int found = 0;
     int i;
     for(i = 1; i < 10000; i++){
-        uintptr_t key = base + i;
+        uintptr_t *key = base + i;
         uintptr_t hash_value = hash(key, HASHSET_SIZE);
         if(hash_value == base_hash){
             found = 1;
@@ -143,8 +143,8 @@ void test_collision_handling(){
 
     HashSet set;
     hashset_init(&set);
-    uintptr_t key1 = base;
-    uintptr_t key2 = base + i;
+    uintptr_t *key1 = base;
+    uintptr_t *key2 = base + i;
 
     hashset_insert(&set, key1);
     hashset_insert(&set, key2);
@@ -162,14 +162,14 @@ void test_stress(){
     HashSet set;
     hashset_init(&set);
     int n = 100000;
-    uintptr_t base_address = 0x00000000000;
+    uintptr_t *base_address = (uintptr_t *)0x00000000000;
     for(int i = 0; i < n; i++){
-        uintptr_t key = base_address + i;
+        uintptr_t *key = base_address + i;
         hashset_insert(&set, key);
     }
 
     for(int i = 0; i < n; i++){
-        uintptr_t key = base_address + i;
+        uintptr_t *key = base_address + i;
         int result = hashset_lookup(&set, key);
         assert_equal(1, result, "Key should be found");
     }
