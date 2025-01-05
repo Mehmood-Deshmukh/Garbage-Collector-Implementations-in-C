@@ -870,3 +870,7 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 ### That's it for the HashSet implementation in C!
 
 **TO DO** : Add comments in the HashMap and HashSet Implementation, and write tests for them.
+
+**Date: 5 January 2025 12:34 PM** 
+
+- Done with adding tests for HashMap and HashSet Implementation.
