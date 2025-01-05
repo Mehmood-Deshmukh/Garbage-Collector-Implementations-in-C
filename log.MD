@@ -254,7 +254,7 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
         metadata.marked = 0;
 
         gc_add_block(block, metadata); /* mapping the block to its metadata */
-        gc.add_root(block); /* adding the block to the root set */
+        gc_add_root(block); /* adding the block to the root set */
 
         return block;
     }
@@ -432,3 +432,439 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 ### That's it for the basic implementation of the garbage collector in C!
 ### Now I will start implementing the basic mark and sweep garbage collector in C, we can later improve it by adding more features or using different algorithms.
 
+**Date : 5 January 2025 08:19 PM**
+
+### Let's start implementing the garbage collector
+
+- But to Start we need to implement a HashMap in C. It will be used to store the mapping of the object to its metadata.
+- I will implement a good and efficient HashMap in C.
+
+### HashMap in C
+
+- A hashmap is a data structure that stores key-value pairs. It allows for fast retrieval of the values associated with a given key.
+- The hashmap is implemented using an array of linked lists. Each element in the array is a linked list that stores the key-value pairs.
+- The key is hashed to determine the index in the array where the key-value pair should be stored.
+- The hashmap provides fast insertion, deletion, and retrieval of key-value pairs.
+- There are various hash functions that can be used to hash the key. The hash function should be efficient and provide a good distribution of keys across the array.
+- The hashmap should also handle collisions, where two keys hash to the same index in the array.
+- There are various ways to avoid collisions. The approach I am choosing is chaining, where the key-value pairs that hash to the same index are stored in a linked list.
+- We will definitely improve the implementation later.
+- We will store the pointers as `uintptr_t` in the hashmap.
+### HashMap Implementation
+
+1. **The Node Structure**
+    - The node structure will store the key-value pair.
+    ```c
+    typedef struct HashMapNode {
+        uintptr_t key;
+        uintptr_t value;
+        struct HashMapNode *next;
+    } HashMapNode;
+    ```
+    - The `key` will be the pointer to the object and the `value` will be the pointer to the metadata.
+    - The `next` field will point to the next node in the linked list.
+
+2. **The HashMap Structure**
+    - The hashmap structure will store the array of linked lists.
+    ```c
+    typedef struct HashMap {
+        Node **buckets;
+        int size;
+    } HashMap;
+    ```
+    - The `buckets` field is an array of linked lists.
+    - The `size` field is the size of the array.
+
+3. **The HashMap Functions**
+    1. Hash Functions
+        - we will use murmur hash function which is a efficient hash function suitable for general hash-based lookup.
+        - The hash function will take the key and the size of the array as input and return the index in the array where the key-value pair should be stored.
+        - This implementation is take from [here](https://github.com/PayalSankpal/DSA-BloomFilters/blob/main/murmurhash.c)
+        ```c
+        uint32_t ROTL32(uint32_t x, int y);
+        uint32_t getblock32(const uint32_t *p, int i);
+        uint32_t generate_seed(void);
+        uint32_t murmurhash3_x86_32(const void *key, size_t len, uint32_t seed);
+        uintptr_t murmur_hash3(uintptr_t key);
+        uintptr_t hash(uintptr_t key, int size);
+
+        /* Hash function for pointer values */
+        uintptr_t hash(uintptr_t key, int size) {
+            return murmur_hash3(key) % size;
+        }
+
+        /* Wrapper for MurmurHash3 */
+        uintptr_t murmur_hash3(uintptr_t key) {
+            return (uintptr_t)murmurhash3_x86_32(&key, sizeof(uintptr_t), generate_seed());
+        }
+
+        /* Seed generator */
+        uint32_t generate_seed(void) {
+            time_t current_time;
+            time(&current_time);
+            return (uint32_t)current_time;
+        }
+
+        /* MurmurHash3 implementation */
+        uint32_t murmurhash3_x86_32(const void *key, size_t len, uint32_t seed) {
+            const uint8_t *data = (const uint8_t *)key;
+            const int nblocks = len / 4;
+            uint32_t h1 = seed;
+            const uint32_t c1 = 0xcc9e2d51;
+            const uint32_t c2 = 0x1b873593;
+            
+            /* Body */
+            const uint32_t *blocks = (const uint32_t *)(data);
+            for (int i = 0; i < nblocks; i++) {
+                uint32_t k1 = getblock32(blocks, i);
+                
+                k1 *= c1;
+                k1 = ROTL32(k1, 15);
+                k1 *= c2;
+                
+                h1 ^= k1;
+                h1 = ROTL32(h1, 13);
+                h1 = h1 * 5 + 0xe6546b64;
+            }
+            
+            /* Tail*/
+            const uint8_t *tail = (const uint8_t *)(data + nblocks * 4);
+            uint32_t k1 = 0;
+            
+            switch (len & 3) {
+                case 3:
+                    k1 ^= tail[2] << 16;
+                    /* fallthrough */
+                case 2:
+                    k1 ^= tail[1] << 8;
+                    /* fallthrough */
+                case 1:
+                    k1 ^= tail[0];
+                    k1 *= c1;
+                    k1 = ROTL32(k1, 15);
+                    k1 *= c2;
+                    h1 ^= k1;
+            }
+            
+            /* Finalization */
+            h1 ^= len;
+            h1 ^= h1 >> 16;
+            h1 *= 0x85ebca6b;
+            h1 ^= h1 >> 13;
+            h1 *= 0xc2b2ae35;
+            h1 ^= h1 >> 16;
+            
+            return h1;
+        }
+
+        /* Helper function to get a block */
+        uint32_t getblock32(const uint32_t *p, int i) {
+            return p[i];
+        }
+
+        /* Bit rotation helper */
+        uint32_t ROTL32(uint32_t x, int y) {
+            return (x << y) | (x >> (32 - y));
+        }
+        ```
+    
+    2. HashMap Initialization
+        - The `hashmap_init()` function will initialize the hashmap.
+        ```c
+        void hashmap_init(HashMap *map, int SIZE){
+            map->buckets = malloc(SIZE * sizeof(Node *));
+            map->size = SIZE;
+
+            for(int i = 0; i < SIZE; i++){
+                map->buckets[i] = NULL;
+            }
+        }
+        ```
+    
+    3. HashMap Insertion
+        - The `hashmap_insert()` function will insert a key-value pair into the hashmap.
+        ```c
+        void hashmap_insert(HashMap *map, uintptr_t key, uintptr_t value){
+            uintptr_t index = hash(key, map->size);
+
+            Node *node = malloc(sizeof(Node));
+            node->key = key;
+            node->value = value;
+            node->next = map->buckets[index];
+            map->buckets[index] = node;
+        }
+        ```
+    4. HashMap Lookup
+        - The `hashmap_lookup()` function will lookup the value associated with a given key.
+        ```c
+        uintptr_t hashmap_lookup(HashMap *map, uintptr_t key){
+            uintptr_t index = hash(key, map->size);
+
+            Node *node = map->buckets[index];
+            while(node){
+                if(node->key == key){
+                    return node->value;
+                }
+                node = node->next;
+            }
+
+            return 0;
+        }
+        ```
+
+    5. HashMap Deletion
+
+        - The `hashmap_delete()` function will delete a key-value pair from the hashmap.
+        ```c
+        void hashmap_delete(HashMap *map, uintptr_t key){
+            uintptr_t index = hash(key, map->size);
+
+            Node *node = map->buckets[index];
+            Node *prev = NULL;
+
+            while(node){
+                if(node->key == key){
+                    if(prev){
+                        prev->next = node->next;
+                    } else {
+                        map->buckets[index] = node->next;
+                    }
+                    free(node);
+                    return;
+                }
+                prev = node;
+                node = node->next;
+            }
+        }
+        ```
+    
+    6. HashMap Free
+        - The `hashmap_free()` function will free the hashmap.
+        ```c
+        void hashmap_free(HashMap *map){
+            for(int i = 0; i < map->size; i++){
+                Node *node = map->buckets[i];
+                while(node){
+                    Node *temp = node;
+                    node = node->next;
+                    free(temp);
+                }
+            }
+            free(map->buckets);
+            free(map);
+        }
+        ```
+    
+    7. HashMap Iterator
+    ```c
+        HashMapIterator *hashmap_iterator_create(HashMap *map){
+            HashMapIterator *iter = malloc(sizeof(HashMapIterator));
+            iter->map = map;
+            iter->index = 0;
+            iter->node = NULL;
+
+            while(iter->index < map->size && !map->buckets[iter->index]){
+                iter->index++;
+            }
+
+            if(iter->index < map->size){
+                iter->node = map->buckets[iter->index];
+            }
+
+            return iter;
+        }
+
+        int hashmap_iterator_has_next(HashMapIterator *iter){
+            return iter->node != NULL;
+        }
+
+        int hashmap_iterator_next(HashMapIterator *iter, uintptr_t *key, uintptr_t *value){
+            if(!hashmap_iterator_has_next(iter)) return 0;
+
+            *key = iter->node->key;
+            *value = iter->node->value;
+
+            iter->node = iter->node->next;
+            if(!iter->node){
+                iter->index++;
+                while(iter->index < iter->map->size && !iter->map->buckets[iter->index]){
+                    iter->index++;
+                }
+
+                if(iter->index < iter->map->size){
+                    iter->node = iter->map->buckets[iter->index];
+                }
+            }
+
+            return 1;
+        }
+
+        void hashmap_iterator_free(HashMapIterator *iter){
+            free(iter);
+        }
+    ```
+
+### That's it for the HashMap implementation in C!
+
+
+**Date : 6 January 2025 11:09 PM**
+
+### HashSet in C
+
+- A hashset is a data structure that stores a set of unique elements.
+- We will use it to store the set of valid addresses in the heap
+- We can implement a HashSet using HashMap but I will like to keep a seperate Implementation.
+
+### HashSet Implementation
+1. **The HashSet Structure**
+    - The hashset structure will store the array of linked lists.
+    ```c
+    typedef struct HashSet {
+        HashSetNode **buckets;
+        int size;
+    } HashSet;
+    ```
+    - The `buckets` field is an array of linked lists.
+    - The `size` field is the size of the array.
+    - The HashSetNode structure will store the key.
+    ```c   
+    typedef struct HashSetNode {
+        uintptr_t key;
+        struct HashSetNode *next;
+    } HashSetNode;
+    ```
+2. **The HashSet Functions**
+    1. HashSet Initialization
+        - The `hashset_init()` function will initialize the hashset.
+        ```c
+        void hashset_init(HashSet *set){
+            set->buckets = malloc(SIZE * sizeof(HashSetNode *));
+            set->size = SIZE;
+
+            for(int i = 0; i < SIZE; i++){
+                set->buckets[i] = NULL;
+            }
+        }
+        ```
+    2. HashSet Insertion
+        - The `hashset_insert()` function will insert a key into the hashset.
+        - We will use the same hash function as the hashmap.
+        ```c
+        void hashset_insert(HashSet *set, uintptr_t key){
+            if(hashset_lookup(set, key)) return;
+            uintptr_t index = hash(key, set->size);
+
+            HashSetNode *node = malloc(sizeof(HashSetNode));
+            node->key = key;
+            node->next = set->buckets[index];
+            set->buckets[index] = node;
+        }
+        ```
+    3. HashSet Lookup
+        - The `hashset_lookup()` function will lookup if a key is present in the hashset.
+        ```c
+        int hashset_lookup(HashSet *set, uintptr_t key){
+            uintptr_t index = hash(key, set->size);
+
+            HashSetNode *node = set->buckets[index];
+            while(node){
+                if(node->key == key){
+                    return 1;
+                }
+                node = node->next;
+            }
+
+            return 0;
+        }
+        ```
+    4. HashSet Deletion
+        - The `hashset_delete()` function will delete a key from the hashset.
+        ```c
+        void hashset_delete(HashSet *set, uintptr_t key){
+            uintptr_t index = hash(key, set->size);
+
+            HashSetNode *node = set->buckets[index];
+            HashSetNode *prev = NULL;
+
+            while(node){
+                if(node->key == key){
+                    if(prev){
+                        prev->next = node->next;
+                    } else {
+                        set->buckets[index] = node->next;
+                    }
+                    free(node);
+                    return;
+                }
+                prev = node;
+                node = node->next;
+            }
+        }
+        ```
+    5. HashSet Free
+        - The `hashset_free()` function will free the hashset.
+        ```c
+        void hashset_free(HashSet *set){
+            for(int i = 0; i < set->size; i++){
+                HashSetNode *node = set->buckets[i
+                while(node){
+                    HashSetNode *temp = node;
+                    node = node->next;
+                    free(temp);
+                }
+            }
+
+            free(set->buckets);
+            set->buckets = NULL;
+            set->size = 0;
+        }
+        ```
+    6. HashSet Iterator
+        - The `hashset_iterator_create()` function will create an iterator for the hashset.
+        ```c
+        HashSetIterator *hashset_iterator_create(HashSet *set){
+            HashSetIterator *iter = malloc(sizeof(HashSetIterator));
+            iter->set = set;
+            iter->index = 0;
+            iter->node = NULL;
+
+            while(iter->index < set->size && !set->buckets[iter->index]){
+                iter->index++;
+            }
+
+            if(iter->index < set->size){
+                iter->node = set->buckets[iter->index];
+            }
+
+            return iter;
+        }
+
+        int hashset_iterator_has_next(HashSetIterator *iter){
+            return iter->node != NULL;
+        }
+
+        uintptr_t hashset_iterator_next(HashSetIterator *iter){
+            if(!hashset_iterator_has_next(iter)) return 0;
+
+            uintptr_t key = iter->node->key;
+
+            iter->node = iter->node->next;
+            if(!iter->node){
+                iter->index++;
+                while(iter->index < iter->set->size && !iter->set->buckets[iter->index]){
+                    iter->index++;
+                }
+
+                if(iter->index < iter->set->size){
+                    iter->node = iter->set->buckets[iter->index];
+                }
+            }
+
+            return key;
+        }
+
+        void hashset_iterator_free(HashSetIterator *iter){
+            free(iter);
+        }
+        ```
+### That's it for the HashSet implementation in C!

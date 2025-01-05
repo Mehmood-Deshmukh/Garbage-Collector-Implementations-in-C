@@ -1,20 +1,20 @@
 #include <stdint.h>
 
-typedef struct Node {
+typedef struct HashMapNode {
     uintptr_t key;
     uintptr_t value;
-    struct Node *next;
-} Node; 
+    struct HashMapNode *next;
+} HashMapNode; 
 
 typedef struct HashMap {
-    Node **buckets;
+    HashMapNode **buckets;
     int size;
 } HashMap;
 
 typedef struct HashMapIterator {
     HashMap *map;
     int index;
-    Node *node;
+    HashMapNode *node;
 } HashMapIterator;
 
 #define SIZE 100

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
-#include "hashmap.h"
+#include "hashset.h"
 
 uintptr_t hash(uintptr_t key, int size);
 uintptr_t murmur_hash3(uintptr_t key);
@@ -10,16 +10,15 @@ uint32_t murmurhash3_x86_32(const void *key, size_t len, uint32_t seed);
 uint32_t getblock32(const uint32_t *p, int i);
 uint32_t ROTL32(uint32_t x, int y);
 
-
-
-void hashmap_init(HashMap *map){
-    map->buckets = malloc(SIZE * sizeof(HashMapNode *));
-    map->size = SIZE;
+void hashset_init(HashSet *set){
+    set->buckets = malloc(SIZE * sizeof(HashSetNode *));
+    set->size = SIZE;
 
     for(int i = 0; i < SIZE; i++){
-        map->buckets[i] = NULL;
+        set->buckets[i] = NULL;
     }
 }
+
 
 uintptr_t hash(uintptr_t key, int size) {
     return murmur_hash3(key) % size;
@@ -91,23 +90,24 @@ uint32_t ROTL32(uint32_t x, int y) {
     return (x << y) | (x >> (32 - y));
 }
 
-void hashmap_insert(HashMap *map, uintptr_t key, uintptr_t value){
-    uintptr_t index = hash(key, map->size);
+void hashset_insert(HashSet *set, uintptr_t key){
+    if(hashset_lookup(set, key)) return;
 
-    HashMapNode *node = malloc(sizeof(HashMapNode));
+    uintptr_t index = hash(key, set->size);
+
+    HashSetNode *node = malloc(sizeof(HashSetNode));
     node->key = key;
-    node->value = value;
-    node->next = map->buckets[index];
-    map->buckets[index] = node;
+    node->next = set->buckets[index];
+    set->buckets[index] = node;
 }
 
-uintptr_t hashmap_lookup(HashMap *map, uintptr_t key){
-    uintptr_t index = hash(key, map->size);
+int hashset_lookup(HashSet *set, uintptr_t key){
+    uintptr_t index = hash(key, set->size);
 
-    HashMapNode *node = map->buckets[index];
+    HashSetNode *node = set->buckets[index];
     while(node){
         if(node->key == key){
-            return node->value;
+            return 1;
         }
         node = node->next;
     }
@@ -115,18 +115,18 @@ uintptr_t hashmap_lookup(HashMap *map, uintptr_t key){
     return 0;
 }
 
-void hashmap_delete(HashMap *map, uintptr_t key){
-    uintptr_t index = hash(key, map->size);
+void hashset_delete(HashSet *set, uintptr_t key){
+    uintptr_t index = hash(key, set->size);
 
-    HashMapNode *node = map->buckets[index];
-    HashMapNode *prev = NULL;
+    HashSetNode *node = set->buckets[index];
+    HashSetNode *prev = NULL;
 
     while(node){
         if(node->key == key){
             if(prev){
                 prev->next = node->next;
             } else {
-                map->buckets[index] = node->next;
+                set->buckets[index] = node->next;
             }
             free(node);
             return;
@@ -136,63 +136,62 @@ void hashmap_delete(HashMap *map, uintptr_t key){
     }
 }
 
-void hashmap_free(HashMap *map){
-    for(int i = 0; i < map->size; i++){
-        HashMapNode *node = map->buckets[i];
+void hashset_free(HashSet *set){
+    for(int i = 0; i < set->size; i++){
+        HashSetNode *node = set->buckets[i];
         while(node){
-            HashMapNode *temp = node;
+            HashSetNode *temp = node;
             node = node->next;
             free(temp);
         }
     }
-    free(map->buckets);
-    map->buckets = NULL;
-    map->size = 0;
+
+    free(set->buckets);
+    set->buckets = NULL;
+    set->size = 0;
 }
 
-
-HashMapIterator *hashmap_iterator_create(HashMap *map){
-    HashMapIterator *iter = malloc(sizeof(HashMapIterator));
-    iter->map = map;
+HashSetIterator *hashset_iterator_create(HashSet *set){
+    HashSetIterator *iter = malloc(sizeof(HashSetIterator));
+    iter->set = set;
     iter->index = 0;
     iter->node = NULL;
 
-    while(iter->index < map->size && !map->buckets[iter->index]){
+    while(iter->index < set->size && !set->buckets[iter->index]){
         iter->index++;
     }
 
-    if(iter->index < map->size){
-        iter->node = map->buckets[iter->index];
+    if(iter->index < set->size){
+        iter->node = set->buckets[iter->index];
     }
 
     return iter;
 }
 
-int hashmap_iterator_has_next(HashMapIterator *iter){
+int hashset_iterator_has_next(HashSetIterator *iter){
     return iter->node != NULL;
 }
 
-int hashmap_iterator_next(HashMapIterator *iter, uintptr_t *key, uintptr_t *value){
-    if(!hashmap_iterator_has_next(iter)) return 0;
+uintptr_t hashset_iterator_next(HashSetIterator *iter){
+    if(!hashset_iterator_has_next(iter)) return 0;
 
-    *key = iter->node->key;
-    *value = iter->node->value;
+    uintptr_t key = iter->node->key;
 
     iter->node = iter->node->next;
     if(!iter->node){
         iter->index++;
-        while(iter->index < iter->map->size && !iter->map->buckets[iter->index]){
+        while(iter->index < iter->set->size && !iter->set->buckets[iter->index]){
             iter->index++;
         }
 
-        if(iter->index < iter->map->size){
-            iter->node = iter->map->buckets[iter->index];
+        if(iter->index < iter->set->size){
+            iter->node = iter->set->buckets[iter->index];
         }
     }
 
-    return 1;
+    return key;
 }
 
-void hashmap_iterator_free(HashMapIterator *iter){
+void hashset_iterator_free(HashSetIterator *iter){
     free(iter);
 }
