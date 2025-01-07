@@ -880,3 +880,9 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 **Date: 5 January 2025 10:44pm**
 - I've implemented a basic mark and sweep garbage collector but sometimes i am getting varaible answers
 - I really will have to look into it
+
+**Date: 7 January 2025 10:11 am**
+
+- So now that I have implemented the basic mark and sweep garbage collector, I will now start implementing the basic mark and compact garbage collector.
+
+- Let's start learning about the mark and compact algorithm.

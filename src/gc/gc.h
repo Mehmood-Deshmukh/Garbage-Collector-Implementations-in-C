@@ -20,6 +20,7 @@ typedef struct GC{
     HashSet *address;
     HashMap *metadata;
     void *stack_top;
+    void *stack_bottom;
 } GC;
 
 static GC gc;

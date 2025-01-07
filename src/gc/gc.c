@@ -12,6 +12,11 @@ void gc_init() {
     gc.stack_top = __builtin_frame_address(1);
     gc.address = malloc(sizeof(HashSet));
     gc.metadata = malloc(sizeof(HashMap));
+
+    int *a = (int *)malloc(sizeof(int));
+    gc.stack_bottom = &a;
+    free(a);
+
     if(!gc.address || !gc.metadata){
         printf("Unable to allocate memory for gc initialization\n");
         exit(1);
@@ -34,19 +39,24 @@ HashSet *get_roots(){
     }
     hashset_init(roots);
 
-
-    uint8_t *stack_bottom = __rsp;
+    uint8_t *stack_bottom = (uint8_t *)gc.stack_bottom + sizeof(uintptr_t);
     uint8_t *stack_top = (uint8_t *)gc.stack_top;
 
+    printf("Stack bottom is %p\n", stack_bottom);
+
     while(stack_bottom < stack_top){
+        printf("%p\n", stack_bottom);
         uintptr_t *address = (uintptr_t *)*(uintptr_t *)stack_bottom;
         if(((uintptr_t)address % sizeof(uintptr_t)) == 0){
             if(hashset_lookup(gc.address, address)){
+                printf("%p is pointing to address %p\n", stack_bottom, address);
                 hashset_insert(roots, address);
             }
         }
-        stack_bottom++;
+        stack_bottom += sizeof(uintptr_t);
     }
+
+    print_hashset(roots);
 
     return roots;
 }
@@ -76,7 +86,7 @@ HashSet *get_children(uintptr_t *address){
             }
         }
 
-        start++;
+        start += sizeof(uintptr_t);
     }
     return children;
 }
@@ -145,6 +155,7 @@ void gc_run(){
     if(!roots) return;
 
     gc_mark(roots);
+    gc_dump("After Marking");
     gc_sweep();
 
     hashset_free(roots);
@@ -209,10 +220,12 @@ void gc_free(uintptr_t *address){
 
 
 void print_hashset(HashSet *set){
+    printf("====================\n");
     HashSetIterator *iterator = hashset_iterator_create(set);
     while(hashset_iterator_has_next(iterator)){
         uintptr_t *address = hashset_iterator_next(iterator);
         printf("%p\n", address);
     }
     hashset_iterator_free(iterator);
+    printf("====================\n");
 }
