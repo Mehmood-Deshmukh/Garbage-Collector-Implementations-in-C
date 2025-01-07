@@ -6,11 +6,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-
-static uint8_t *__rsp;
-
-#define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
-
 typedef struct MetaData {
     int marked;
     size_t size;

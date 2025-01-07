@@ -29,8 +29,6 @@ void gc_init() {
 HashSet *get_roots(){
     jmp_buf jb;
     setjmp(jb);
-    
-    __READ_RSP();
 
     HashSet *roots = malloc(sizeof(HashSet));
     if(!roots){
@@ -42,21 +40,16 @@ HashSet *get_roots(){
     uint8_t *stack_bottom = (uint8_t *)gc.stack_bottom + sizeof(uintptr_t);
     uint8_t *stack_top = (uint8_t *)gc.stack_top;
 
-    printf("Stack bottom is %p\n", stack_bottom);
 
     while(stack_bottom < stack_top){
-        printf("%p\n", stack_bottom);
         uintptr_t *address = (uintptr_t *)*(uintptr_t *)stack_bottom;
         if(((uintptr_t)address % sizeof(uintptr_t)) == 0){
             if(hashset_lookup(gc.address, address)){
-                printf("%p is pointing to address %p\n", stack_bottom, address);
                 hashset_insert(roots, address);
             }
         }
         stack_bottom += sizeof(uintptr_t);
     }
-
-    print_hashset(roots);
 
     return roots;
 }

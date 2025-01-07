@@ -886,3 +886,57 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 - So now that I have implemented the basic mark and sweep garbage collector, I will now start implementing the basic mark and compact garbage collector.
 
 - Let's start learning about the mark and compact algorithm.
+
+**Date: 7 January 2025 11:44 pm**
+
+- Well finally the bug was fixed and the garbage collector is working fine now.
+- Special Thanks to [Aditya Deshmukh](https://github.com/adityasd314) for helping me out with the bug.
+- Well i will explain the bug and the solution now.
+
+### The Bug
+- The bug was that the `get_roots()` function was not scanning the stack properly.
+- This is because there was always some pointer which was pointing to some garbage memory location.
+- The reason for this is what I'm yet to find out. 
+- But the solution was quite simple:
+- Old Implementation: 
+```c
+    /* earlier we did this in the get_roots function */
+    static uint8_t *__rsp;
+
+    #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
+
+    stack_bottom = __rsp;
+```
+- New Implementation:
+
+```c
+    /* In the gc_init function we will store the stack_bottom and use it in the get_roots function*/
+    int *a = (int *)malloc(sizeof(int));
+    gc.stack_bottom = &a;
+    free(a);
+```
+
+- This is more reliable than the earlier approach which used inlibe assembly to get the stack pointer.
+```
+Higher Memory Address
++------------------+
+|   Other stack    |
+|    frames        |
++------------------+
+|    &a            |  ← gc.stack_bottom points here
++------------------+
+| gc_init's local  |
+| variables        |
++------------------+
+| Return address   |
+| and saved regs   |
++------------------+  ← gc.stack_top points here (__builtin_frame_address(1))
+|   Caller's       |
+|   stack frame    |
++------------------+
+Lower Memory Address
+```
+
+- Now that the garbage collector is working fine, I will start implementing the mark and compact garbage collector.
+
+

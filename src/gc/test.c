@@ -1,31 +1,44 @@
-#include<stdio.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "gc.h"
 
 typedef struct Node{
   int data;
-  struct Node *left;
-  struct Node *right;
+  struct Node *left, *right;
 } Node;
 
+Node *createGraph(){
+  Node *a = (Node *)gc_malloc(sizeof(Node));
+  Node *b = (Node *)gc_malloc(sizeof(Node));
+  Node *c = (Node *)gc_malloc(sizeof(Node));
+  Node *d = (Node *)gc_malloc(sizeof(Node));
+  Node *e = (Node *)gc_malloc(sizeof(Node));
+  Node *f = (Node *)gc_malloc(sizeof(Node));
+  Node *g = (Node *)gc_malloc(sizeof(Node));
+  Node *h = (Node *)gc_malloc(sizeof(Node));
+
+  a->left = b;
+  a->right = c;
+
+  c->left = d;
+  c->right = e;
+
+  e->left = f;
+  e->right = g;
+
+  g->right = h;
+
+  return a;
+}
+
 int main(){
-    gc_init();
-    Node *a = (Node *)gc_malloc(sizeof(Node));
-    Node *b = (Node *)gc_malloc(sizeof(Node));
-    Node *c = (Node *)gc_malloc(sizeof(Node));
-    Node *d = (Node *)gc_malloc(sizeof(Node));
-    Node *e = (Node *)gc_malloc(sizeof(Node));
+  gc_init();
 
-    a->left = b;
-    a->right = c;
+  Node *a = createGraph();
 
-    c->left = d;
-    c->right = e;
-
-    b = c = d = e = NULL;
-    gc_dump("Allocated Stuff");
-    a->right = NULL;
-    gc_run();
-    gc_dump("After GC");
-    return 0;
+  gc_dump("Allocated Graph");
+  a->right = NULL;
+  gc_run();
+  gc_dump("After GC");
+  return 0;
 }
