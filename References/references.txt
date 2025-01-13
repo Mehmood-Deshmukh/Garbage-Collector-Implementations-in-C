@@ -1,0 +1,3 @@
+http://dmitrysoshnikov.com/compilers/writing-a-mark-sweep-garbage-collector/
+https://en.wikipedia.org/wiki/Tracing_garbage_collection
+https://github.com/sameerkavthekar/garbage-collector

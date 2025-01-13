@@ -179,7 +179,7 @@ void gc_dump(char *message){
 void *gc_malloc(size_t size){
     if(size == 0) return NULL;
 
-    void *address = (void *)malloc(size);
+    void *address = (void *)calloc(1, size);
     if(!address){
         printf("Unable to allocate memory for size %zu\n", size);
         exit(1);

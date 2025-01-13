@@ -904,7 +904,8 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
     static uint8_t *__rsp;
 
     #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
-
+    
+    __READ_RSP() 
     stack_bottom = __rsp;
 ```
 - New Implementation:
