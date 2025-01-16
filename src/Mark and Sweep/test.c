@@ -7,7 +7,7 @@ typedef struct Node{
   struct Node *left, *right;
 } Node;
 
-Node *createGraph(){
+Node *create_graph(){
   Node *a = (Node *)gc_malloc(sizeof(Node));
   Node *b = (Node *)gc_malloc(sizeof(Node));
   Node *c = (Node *)gc_malloc(sizeof(Node));
@@ -34,7 +34,7 @@ Node *createGraph(){
 int main(){
   gc_init();
 
-  Node *a = createGraph();
+  Node *a = create_graph();
 
   gc_dump("Allocated Graph");
   a->right = NULL;
