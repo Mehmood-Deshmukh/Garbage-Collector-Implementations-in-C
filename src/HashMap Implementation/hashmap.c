@@ -98,11 +98,11 @@ int hashmap_iterator_has_next(HashMapIterator *iter){
     return iter->node != NULL;
 }
 
-int hashmap_iterator_next(HashMapIterator *iter, uintptr_t *key, uintptr_t *value){
+int hashmap_iterator_next(HashMapIterator *iter, uintptr_t **key, uintptr_t **value){
     if(!hashmap_iterator_has_next(iter)) return 0;
 
-    key = iter->node->key;
-    value = iter->node->value;
+    *key = iter->node->key;
+    *value = iter->node->value;
 
     iter->node = iter->node->next;
     if(!iter->node){

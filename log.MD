@@ -941,3 +941,75 @@ Lower Memory Address
 - Now that the garbage collector is working fine, I will start implementing the mark and compact garbage collector.
 
 
+**Date: 15 January 2025 07:53 pm**
+
+- For the past few days I have been reading about the mark and compact garbage collector.
+- References: 
+    1. [Wikipedia Article](https://en.wikipedia.org/wiki/Mark-compact_algorithm)
+    2. [Presentation](https://www.cs.tau.ac.il//~maon/teaching/2014-2015/seminar/seminar1415a-lec2-mark-sweep-mark-compact.pdf)
+
+### Why Mark and Compact?
+
+- To answer this we need to understand the problem with the mark and sweep algorithm.
+- The mark and sweep algorithm has a problem of fragmentation.
+- When objects are freed from memory, the memory can be scattered, this can lead to fragmentation.
+- Fragmentation is the phenomenon where the memory is divided into small chunks, but the chunks are not contiguous.
+<img src="./References/Images/05- Fragmentation.png" width="400">
+
+- The mark and compact algorithm solves this problem by compacting the live objects in memory.
+
+### What Algorithm does Mark and Compact use?
+
+- There are a lot of algorithms that can be used for the mark and compact garbage collector.
+    1. Table based compaction
+    2. LISP2
+    3. Compressor
+
+- we will use the **LISP2** algorithm for the mark and compact garbage collector.
+
+**Date: 16 January 2025 10:02 PM**
+
+### How does the LISP2 Algorithm work?
+
+- LISP2 is arguably the fastest compaction algorithm.
+- It is a sliding collector algorithm.
+- The LISP2 algorithm uses three different passes over the heap. In addition the heap objects must have a seperate forwarding pointer slot that is not used outside of the garbage collector.
+- After the standard marking the Algorithm proceeds in the following three passes.
+    1. Compute the forwarding location for live objects.
+        - Keep track of a free and live pointer and initialize both to the start of heap.
+        - If the live pointer points to a live object, update that object's forwarding pointer to the current free pointer and - increment the free pointer according to the object's size.
+        - Move the live pointer to the next object
+        - End when the live pointer reaches the end of heap.
+    2. Update all pointers
+        - For each live object, update its pointers according to the forwarding pointers of the objects they point to.
+    3. Move objects
+        - For each live object, move its data to its forwarding location.
+
+- **this algorithm is O(n) on the size of the heap**
+
+### Let's start implementing the mark and compact garbage collector
+
+- The reference for this is the presentation I mentioned earlier.
+- Basically the `gc_compact()` function will do the following:
+    1. Compute the forwarding location for live objects.
+    2. Update all pointers
+    3. Move objects
+- It will look like this:
+```c
+void gc_compact(HashMap *roots){
+    compute_locations();
+    update_references(roots);
+    relocate();
+}
+```
+
+- The `compute_locations()` function will compute the forwarding location for live objects.
+- The `update_references()` function will update all the pointers.
+- The `relocate()` function will move the objects.
+- Also the metadata structure will now have a 'forwarding_address' field.
+
+
+**Date: 17 January 2025 12:57 AM**
+
+- Finally done with the basic implementation of the mark and compact garbage collector.
+- I will explain the implementation tommorrow. I am really tired now.

@@ -1,3 +1,5 @@
 http://dmitrysoshnikov.com/compilers/writing-a-mark-sweep-garbage-collector/
 https://en.wikipedia.org/wiki/Tracing_garbage_collection
 https://github.com/sameerkavthekar/garbage-collector
+https://en.wikipedia.org/wiki/Mark-compact_algorithm
+https://www.cs.tau.ac.il//~maon/teaching/2014-2015/seminar/seminar1415a-lec2-mark-sweep-mark-compact.pdf

@@ -118,11 +118,11 @@ int hashmap_iterator_has_next(HashMapIterator *iter);
     function : hashmap_iterator_next
     purpose : get the next key-value pair from the iterator
     parameters : HashMapIterator *iter - pointer to the iterator
-                 uintptr_t *key - pointer to store the key
-                 uintptr_t *value - pointer to store the value
+                 uintptr_t **key - pointer to store the key
+                 uintptr_t **value - pointer to store the value
     returns : int - 1 if successful, 0 otherwise
 */
-int hashmap_iterator_next(HashMapIterator *iter, uintptr_t *key, uintptr_t *value);
+int hashmap_iterator_next(HashMapIterator *iter, uintptr_t **key, uintptr_t **value);
 
 /*
     function : hashmap_iterator_free
