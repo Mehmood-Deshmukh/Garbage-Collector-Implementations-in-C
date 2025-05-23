@@ -1,14 +1,17 @@
 #ifndef GC_H
 #define GC_H
 
-#include "../HashSet Implementation/hashset.h"
-#include "../HashMap Implementation/hashmap.h"
+#include "../../src/HashSet-Implementation/hashset.h"
+#include "../../src/HashMap-Implementation/hashmap.h"
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef struct MetaData {
     int marked;
     size_t size;
+    uint8_t *address;
+    uint8_t *forwarding_address;
+    struct MetaData *next;
 } MetaData;
 
 typedef struct GC{
@@ -16,9 +19,12 @@ typedef struct GC{
     HashMap *metadata;
     void *stack_top;
     void *stack_bottom;
+    MetaData *list_head;
+    MetaData *list_tail;
+    int total_allocated;
 } GC;
 
-static GC gc;
+extern GC gc;
 
 void gc_init();
 void gc_run();

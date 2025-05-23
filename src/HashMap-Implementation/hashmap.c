@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "hashmap.h"
-#include "../Hash Functions/hash_functions.h"
+#include "../Hash-Functions/hash_functions.h"
 
 void hashmap_init(HashMap *map){
     map->buckets = malloc(HASHMAP_SIZE * sizeof(HashMapNode *));

@@ -11,6 +11,8 @@ void print_hashset(HashSet *set);
 void print_hashmap(HashMap *map);
 void print_linked_list();
 
+GC gc;
+
 void gc_init() {
     gc.stack_top = __builtin_frame_address(1);
     gc.address = malloc(sizeof(HashSet));

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "hashset.h"
-#include "../../src/Hash Functions/hash_functions.h"
+#include "../../src/Hash-Functions/hash_functions.h"
 
 void hashset_init(HashSet *set){
     set->buckets = malloc(HASHSET_SIZE * sizeof(HashSetNode *));

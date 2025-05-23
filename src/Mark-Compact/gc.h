@@ -1,8 +1,8 @@
 #ifndef GC_H
 #define GC_H
 
-#include "../HashSet Implementation/hashset.h"
-#include "../HashMap Implementation/hashmap.h"
+#include "../HashSet-Implementation/hashset.h"
+#include "../HashMap-Implementation/hashmap.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -24,7 +24,7 @@ typedef struct GC{
     int total_allocated;
 } GC;
 
-static GC gc;
+extern GC gc;
 
 void gc_init();
 void gc_run();
