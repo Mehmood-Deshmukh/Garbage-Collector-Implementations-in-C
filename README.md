@@ -88,8 +88,8 @@ gc_run();
 Use `gc_dump()` to get information about the current state of the garbage collector:
 
 ```c
-char *message; /* This is just a heading which will be printed before gc's state */
-gc_dump(&message);
+char *message = 'YOUR_HEADING' /* This is just a heading which will be printed before gc's state */
+gc_dump(message);
 ```
 
 ### Memory Deallocation
@@ -119,8 +119,7 @@ int main() {
     
 
     /* checking gc's status */
-    char *status;
-    gc_dump(&status);
+    gc_dump("Garbage Collector State:");
     
     return 0;
 }
