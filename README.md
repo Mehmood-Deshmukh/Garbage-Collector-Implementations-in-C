@@ -47,6 +47,16 @@ gcc your_program.c gc.o hashmap.o hashset.o hash_functions.o -I./src/(implemenat
 make clean
 ```
 
+### OR, if you are lazy (which I am sure you are), you can use the provided script to compile your program:
+
+```bash
+./compile.sh <input_c_file> <implementation_method>
+```
+This script will automatically compile your program with the specified garbage collector implementation.
+**Note**: Replace `<implementation_method>` with either `mark_and_sweep` or `mark_and_compact`. (I will find a convenient way to set this in the future)
+
+**Credits**: Thanks to Yashwant Bhosale for giving me the idea to create this script. 
+
 ### Basic Setup
 
 ```c
