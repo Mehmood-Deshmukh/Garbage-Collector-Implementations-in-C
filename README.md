@@ -80,7 +80,7 @@ Use `gc_malloc()` instead of regular `malloc()` to allocate memory that will be 
 
 ```c
 size_t size = 1024;
-void *test = gc_malloc(&size);
+void *test = gc_malloc(size);
 
 /* Memory will be automatically freed during garbage collection cycles */
 ```
@@ -120,10 +120,10 @@ int main() {
     gc_init();
     
     size_t size1 = 100;
-    void *ptr1 = gc_malloc(&size1);
+    void *ptr1 = gc_malloc(size1);
     
     size_t size2 = 200;
-    void *ptr2 = gc_malloc(&size2);
+    void *ptr2 = gc_malloc(size2);
     
     gc_run();
     
