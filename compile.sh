@@ -1,12 +1,18 @@
 #!/bin/bash
 
 INPUT_C_FILE=$1
-IMPLEMENTATION_METHOD=$2
+IS_MARK_COMPACT=$2
 OUTPUT_FILE=${INPUT_C_FILE%.c}
 
-if [ -z "$INPUT_C_FILE" ] || [ -z "$IMPLEMENTATION_METHOD" ]; then
-  echo "Usage: $0 <input_c_file> <implementation_method>"
+if [ -z "$INPUT_C_FILE" ]; then
+  echo "Usage: $0 <input_c_file> < -c if you want to use mark-compact implementation>"
   exit 1
+fi
+
+if [ -z "$IS_MARK_COMPACT" ]; then
+  IMPLEMENTATION_METHOD="mark_and_sweep"
+else
+  IMPLEMENTATION_METHOD="mark_compact"
 fi
 
 GC_MARK_AND_SWEEP_OBJ='gc_mark_and_sweep.o'
