@@ -1,14 +1,85 @@
 **Date : 27 December 2024 03:19 PM**
+**Edit: 12 July 2025 03:27 PM**
 
-So to create a garbage collector in C, I had to go through a lot of articles related to it, and i came to the conclusion that it is not possible to create a fully functional garbage collector in C. so we will implement a conservative garbage collector.
+### What is a Garbage Collector?
+
+- A garbage collector (GC) is a form of automatic memory management that attempts to reclaim memory that was allocated by the program but is no longer referenced. 
+- In simpler terms, any memory that is no longer referenced by the program is called `garbage` and the garbage collector attempts to reclaim that memory.
+- Suppose you malloc an array of integers and forget to free it or if you make the pointer point to some other memory location, then the memory allocated for the array is no longer reachable by the program. This memory is called `garbage` and the garbage collector helps us reclaim it.
+
+Do you need it? 
+well...
+"A good programmer is someone who always frees their malloced memory" - Abhijit A.M (He is my professor who taught me a course on problem solving using procedural programming in C)
+I think we don't need it, because we are good programmers :D
+
+But I was fascinated by the idea of a garbage collector and wanted to implement one in C, because C doesn't have one. 
+
+So to create a garbage collector in C, I had to go through a lot of articles related to it, and i came to the conclusion that:
+- It is possible to create a garbage collector in C, yay! but
+- It is not possible to create a "fully functional", "general purpose" or in easy words a "full proof" garbage collector in C.
+
+great adjectives right? :D
+
+But you must have the question, why? or why not? worry not, I will give you the answer.
+
+First, we need to understand some basic concepts of garbage collection and how it works in general.
+
+Some terminologies that you should know before we start:
+- **Garbage**: Memory that is no longer referenced by the program and can be reclaimed.
+- **Root Set**: The set of objects that are guaranteed to be live, such as global variables, stack variables, and registers.
+- **Live Object**: An object that is reachable from the root set and can be accessed by the program.
+**Unreachable Object**: An object that is not reachable from the root set and can be reclaimed by the garbage collector.
+
+Most of the garbage collectors work on the principle of "tracing" the root set and finding all the reachable objects from it. This is called the **Tracing Garbage Collection**.
+You can think of it as a recursive algorithm
+
+1. start from the root set
+2. mark all the objects that are reachable from the root set
+3 recursively mark all the objects that are reachable from the marked objects
+4. continue until no more objects can be marked
+5. deallocate or "sweep" all the objects that are not marked    
+
+### Why can't we do this in C?
+
+1. No run time information
+    The requirement of a GC, is to first mark all objects in heap that are reachable from the root set and then mark all the objects reachable from those objects (in the heap).
+    This essentially requires the GC to disinguish between pointers and non-pointer data types in the heap.
+
+    **The problem**
+   - in C, the compiler does not keep metadata about which bits in memory are data types or pointers. i.e looking at a memory location, we can't tell if it is a pointer or just a integer, float, etc.
+   - At runtime, everything is just a sequence of bits  
+   ```java
+    int *ptr = malloc(sizeof(int));
+    int value = 42;
+    ```
+    - At runtime, both might have similar bit patterns, but one is a pointer and the other is an integer. 
+
+   - On the other hand in language like `Java`, every object has a header that contains metadata about the object, such as its type, size, and other information. The JVM uses this metadata to traverse the objects safely. The GC knows exactly what each memory location represents.
+
+
+2. No root set
+    - In C, we don't have a root set. The root set is the set of objects that are guaranteed to be live, such as global variables, stack variables, and registers.
+    - In C, we don't have a way to get the root set. We can only get the root set by scanning the stack and registers, which is not a trivial task. (It is architecture dependent and requires inline assembly or compiler built-ins)
+    - In languages like `Java`, the JVM keeps track of the root set and provides APIs to access it.
+
+### So what can we do?
+We can create somethign called a "conservative garbage collector".
 
 A "conservative garbage collector" is a type of garbage collector in computer science that operates with minimal information about the structure of a program's data, meaning it can reclaim memory by assuming any memory location that looks like a potential pointer is actually a pointer, even if it might not be, leading to potentially leaving some unused memory untouched to avoid mistakenly freeing memory that is still needed by the program
 
-we have a lot of tasks to do. first we need a way to scan the stack.
+we have a lot of tasks to do. first we need a way to get the root set, this inolves scanning the stack and registers. 
+
 let's start studying about it.
 
 1. Getting the stack top
-   [source](https://gcc.gnu.org/onlinedocs/gcc/Return-Address.html)
+    
+    **Some terminolgies**
+    - **Stack Frame**: when a function is called, your cpu or compiler sets up a stack frame for that function.
+    the stack frame is a chunk of memory that contains the function's local variables, return address etc.
+
+    - **frame address**: it is the base address or the starting address of the stack frame
+
+    - Here is the [source](https://gcc.gnu.org/onlinedocs/gcc/Return-Address.html)
 
    - Definition: void \*\_\_builtin_frame_address(unsigned level)
 
@@ -16,38 +87,74 @@ let's start studying about it.
        - 0 gives the frame address of the current function.
        - 1 gives the frame address of the caller of the current function.
        - 2 gives the frame address of the caller's caller, and so on.
+    
+    - What is the stack frame?
+      - stack frame means the region of the stack that holds the local variables, saved registers, return address, etc for a function call.
 
    - Why pass 1?
-     - The current function's frame (level = 0) is part of the active stack, so using it might give a value too far down the stack.
-     - The caller’s frame (level = 1) is higher up in the stack and provides a better estimate of the starting (or topmost) stack location.
+     - 0 will give the address of the current function's stack frame, which is not what we want.
+     - 1 will give the address of the caller's stack frame, which in our case will be the main function's stack frame, which is usually the entry point of the program.
+     So using 1 inside a initialization function like `gc_init()` gives us main's frame address
 
    ```c
    void *stack_top = __builtin_frame_address(1);
    ```
-
    - This code snippet gets the top of the stack by passing 1 to \_\_builtin_frame_address.
-   - The stack grows downwards, so the top of the stack is the lowest address in the stack.
 
 2. Getting the stack bottom
 
-   - I found this code on internet which uses inline assembly to get the stack bottom.
-   - I will study about it and try to understand it.
-   - I will also try to find a better way to get the stack bottom.
+   - we can get the stack bottom by calling a function, declaring a local variable, and then taking the address of that variable.
+   it will look something like this:
 
    ```c
-   uint8_t *__rsp;
-   void __read_rsp() {
-       __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp));
-   }
-   __read_rsp();
-   uint8_t *stack_bottom = __rsp;
-
-   /* or a macro */
-   #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
-   ```
+    void *stack_bottom(){
+         int local_var;
+         return &local_var;
+    }
+    ```
+    This works because the local variable will be allocated and the end of the stack
 
 3. Scanning the stack
    - Now as we have the stack top and stack bottom, we can scan the stack.
+
+okay! if you are confused about this stack part. let me explain it to you
+- The stack is a region of memory that is used to store local variables, function parameters, and return addresses.
+- The stack always grows downwards, meaning that the stack top is at a higher memory address than the stack bottom.
+It will look something like this:
+
+```
+    +-----------------------------+
+    | stack top (higher address)  |
+    +-----------------------------+
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    +-----------------------------+
+    | stack bottom (lower address)|
+    +-----------------------------+
+            grows downwards
+    ```
+
+So when you call the __builtin_frame_address(1) you get the stack top 
+
+and this is how you get the bottom:
+
+```
+    -------------------------------
+    | stack top (higher address)  |
+    -------------------------------
+    | main()                      |
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    -------------------------------
+    | gc_init()'s frame           |
+    | &a                          | <- stack_bottom
+    -------------------------------
+
 
 **Date : 4 January 2025 12:37 PM**
 

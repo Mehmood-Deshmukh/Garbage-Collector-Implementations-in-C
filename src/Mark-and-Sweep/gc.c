@@ -150,7 +150,6 @@ void gc_run(){
     if(!roots) return;
 
     gc_mark(roots);
-    gc_dump("After Marking");
     gc_sweep();
 
     hashset_free(roots);

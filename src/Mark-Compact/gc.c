@@ -252,7 +252,6 @@ void gc_run(){
     if(!roots) return;
     print_linked_list();
     gc_mark(roots);
-    gc_dump("After Marking");
     gc_compact(roots); 
     gc_sweep();
 
