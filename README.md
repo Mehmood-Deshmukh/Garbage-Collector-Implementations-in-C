@@ -1,11 +1,11 @@
 # Garbage Collector Implementations in C
 
+**NOTE**: If you really want to know how this works, you can read [documentation](./log.MD), This is not the documentation, but it contains me talking to myself while making this project. It is inspired from the blog scene in the movie *The Social Network*.
+
 This repository contains working implementations of two garbage collection algorithms:
 
 1. **Mark and Sweep**: A traditional tracing garbage collection approach that marks live objects and sweeps away unreferenced ones.
 2. **Mark and Compact**: An optimization that reduces memory fragmentation by relocating live objects to contiguous memory.
-
-For a detailed explanation of the implementation and theory, please read the [documentation](./log.MD)
 
 ## Usage
 

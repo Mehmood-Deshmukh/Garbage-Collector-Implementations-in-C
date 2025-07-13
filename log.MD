@@ -162,6 +162,8 @@ for past few days I was studying and hence I was not able to work on the project
 
 What I think is the most crucial part of the project is to have through knowledge of garbage collection and the various algorithms used in it. I will start studying about it in more detail, though I have already read about it but I will go through it again.
 
+Now i'll write a bunch of stuff formally :D you need to bare with it.
+
 ### What is Garbage Collection?
 
 - In computer science, garbage collection (GC) is a form of automatic memory management.
@@ -179,11 +181,11 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
 ### Disadvantages of Garbage Collection
 
-- GC uses computing resources to decide which memory to free. Therefore, the penalty for the convenience of not annotating object lifetime manually in the source code is overhead, which can impair program performance.
+- we need some additional resources to keep track of the objects in memory, which can lead to increased memory usage.
 
-- The moment when the garbage is actually collected can be unpredictable, resulting in stalls (pauses to shift/free memory) scattered throughout a session. Unpredictable stalls can be unacceptable in real-time environments, in transaction processing, or in interactive programs. Incremental, concurrent, and real-time garbage collectors address these problems, with varying trade-offs.
+- The implementation i'm thinking of is called *stop the world* garbage collection, which means that the program is paused while the garbage collector is running. This can lead to performance issues in real-time applications. This is not acceptable in applications that require low latency or real-time performance.
 
-### Garbage Collection Algorithms and Strategies
+### What are the various strategies for Garbage Collection?
 
 - All the garbage collection algorithms are divided into two categories:
   - Tracing
@@ -203,17 +205,23 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
      - Incremental Garbage Collection
 
    - Also there are some implementation strategies like **Moving and Non-Moving Collectors**.
-     - When objects are freed from memory, the memory can be scattered, this can lead to fragmentation. Moving collectors move objects around in memory to avoid fragmentation.
+   - When objects are freed from memory, the memory can be scattered, this can lead to fragmentation. 
+   *fragmentation* is a situation where free memory is not contiguous, that is there are small chunks of free memory scattered throughout the heap. Suppose you want to allocate a large object, but there is no contiguous block of memory available, then you will not be able to allocate the object, even though there is enough free memory available.
+
+   - Moving collectors move objects around in memory to avoid fragmentation. (Hey guys, mehmood here from future, turns out that I implemented a moving collector too :D)
 
 2. **Reference Counting**
    - Reference counting is a simple garbage collection algorithm that works by counting the number of references to an object. When the reference count drops to zero, the object is deallocated.
    - There are a lot of disadvantages of reference counting like it can't handle circular references, it has overhead of maintaining the reference count, etc.
 
+
+After going through all these, I've decided to implement the **Mark and Sweep** algorithm, which is a tracing garbage collection algorithm. It is the simplest!
+
 ### Let's learn about Mark and Sweep Algorithm
 
 - **Mark and Sweep** is a classic garbage collection algorithm that is used to reclaim memory occupied by objects that are no longer in use by the program.
-- The algorithm consists of two phases: the mark phase and the sweep phase.
-- The mark phase identifies all objects that are reachable from the root set of objects (usually global variables, stack variables, and registers) and marks them as live.
+- The algorithm consists of two phases: the `mark` phase and the `sweep` phase.
+- The mark phase identifies all objects that are reachable from the root set of objects and marks them as live.
 - The sweep phase then scans the heap and deallocates any objects that are not marked as live.
 
 # Some important points
@@ -222,6 +230,8 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
 - To implement the tracing algorithm, we need to obtain all the pointers (childs) inside an object. Then find the pointers inside the child objects and so on, traversing the whole object graph.
 - The problem with C is that once we get a pointer, we can't tell wether it is a pointer or just a simple number.
+- I explained the problem in detail earlier, you may take a look at it once again.
+
 - So we will use an approach called the **duck test**. If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck. :) [source](https://en.wikipedia.org/wiki/Duck_test)
 - if it looks like a pointer and points to a valid memory location in the heap, then we will consider it as a pointer.
 - Now this will make our garbage collector a **conservative garbage collector**, which I mentioned in the first log.
@@ -233,7 +243,7 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 - Now, higher level languages keep a track of the roots for GC purposes, but in C, we don't have that luxury.
 
 - In C, we must manually scan the stack to find the roots.
-- additionally, some objects might be stored in registers, so we need to scan the registers as well. we can use some tricks to push the registers to the stack and then scan the stack.
+- additionally, some objects might be stored in registers, so we need to scan the registers as well. we can use some tricks to push the registers to the stack and then scan the stack. (smartly avoiding to reveal that i already know how to do it :D)
 
 **Date : 4 January 2025 02:50 PM**
 
@@ -244,6 +254,7 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
    - This will be the most important part of our implementation.
    - This will contain all the information about the object, which will be used by the garbage collector.
    - But for now for now we will just have a simple structure. This example is take from Dmitry Soshnikov's blog, with a few modifications.
+   - reference: [Dmitry Soshnikov's blog](https://dmitrysoshnikov.com/compilers/writing-a-mark-sweep-garbage-collector/)
 
    ```c
    typedef struct Traceable {
