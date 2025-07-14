@@ -374,6 +374,10 @@ After going through all these, I've decided to implement the **Mark and Sweep** 
 
    - This single operation will make the entire right subtree Garbage.
    - **Note** : It is garbage in a garbage collector's perspective. In pure C, it is a **memory leak.**<br>
+
+   A more formal definition of `memory leak` is : A memory leak occurs when a program allocates memory on the heap (using functions like `malloc()`, `calloc()`, or `realloc()`) but fails to free it (using `free()`), and then loses all references to that memory.
+
+
      <img src="./References/Images/02 - Garbage Right Subtree.png" width="400">
 
 3. **Custom Memory Allocator**
