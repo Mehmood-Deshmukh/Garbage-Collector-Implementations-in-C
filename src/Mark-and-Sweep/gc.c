@@ -1,14 +1,51 @@
 #include "gc.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <setjmp.h>
+#include <setjmp.h> /* for setjmp */
+
+
+/*
+ * Pragma is a compiler directive that provides additional information to the compiler.
+ * diagnostic - This pragma is used to control the compiler's warning and error messages.
+ * the first pragma is used to push the compiler's current warning state onto a stack. 
+ * This allows us to temporarily change the warning state and then restore it later.
+ * -Wframe-address - This warning is generated to let the user know that
+ * "You’re using __builtin_frame_address or __builtin_return_address. These are not always 
+ * reliable, they’re non-standard, might not work in optimized code, etc"
+ * 
+ * We are suppressing this warning.
+ */
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wframe-address"
 
+
+/* used for debugging */
 void print_hashset(HashSet *set);
 
+/* This is the actual instance of the garbage collector. */
 GC gc;
+
+/*
+ * About this function:
+ * 
+ * This function initializes the garbage collector.
+ * It does the following:
+ * 1. Sets the stack_top to the main' frame address.
+ *   - This is done using __builtin_frame_address(1) which gives the frame address
+ *     of the caller function (in this case, main).
+ * 2. Allocates memory for the address set and metadata map.
+ *   - The address set is a HashSet that will store all the allocated addresses.
+ *   - The metadata map is a HashMap that will store the metadata of the objects.
+ * 3. getting the stack_bottom address.
+ *   - This is done by allocating a temporary integer pointer, and then setting
+ *     stack_bottom to the address of that pointer. credits - Aditya Deshmukh
+ * 4. Initializes the address set and metadata map.
+ * 
+ * 
+ * This must be the first function to be called before using the garbage collector. 
+ */
+
 
 void gc_init() {
     gc.stack_top = __builtin_frame_address(1);
@@ -28,6 +65,34 @@ void gc_init() {
     hashmap_init(gc.metadata);
 }
 
+/* 
+ * About this function:
+ * 
+ * This function helps to get the roots, the starting points of the garbage collection.
+ * These are the objects that are guaranteed to be reachable from the program.
+ *  What are these objects? - those reachable from the objects on the stack.
+ * 
+ * So our task is simple - just scan the stack and get the roots.
+ * 
+ * However, a simple addition : sometimes the compiler can choose to store
+ * the objects in registers instead of the stack.
+ * 
+ * How can we access this? 
+ * we use setjmp function from the setjmp.h library.
+ * setjmp is a function that saves the contents of registers 
+ * in a jmp_buf structure and now we can access them
+ * 
+ * How it works:
+ * 1. We create a jmp_buf variable to store the state of the registers and call the setjmp function.
+ * 2. We allocate memory for the roots HashSet.
+ * 3. We get the stack_bottom and stack_top addresses from the gc instance.
+ * 4. We iterate over the stack from stack_bottom to stack_top.
+ *    - for each pointer like value in the stack, we check if it is a valid address
+ *      in the garbage collector's address set.
+ *   - if it is, we insert it into the roots HashSet.
+ * 5. Finally, we return the roots HashSet.
+ */
+
 HashSet *get_roots(){
     jmp_buf jb;
     setjmp(jb);
@@ -39,18 +104,18 @@ HashSet *get_roots(){
     }
     hashset_init(roots);
 
-    uint8_t *stack_bottom = (uint8_t *)gc.stack_bottom + sizeof(uintptr_t);
-    uint8_t *stack_top = (uint8_t *)gc.stack_top;
+    uintptr_t *stack_bottom = (uintptr_t *) gc.stack_bottom + 1;
+    uintptr_t *stack_top = (uintptr_t *)gc.stack_top;
 
 
     while(stack_bottom < stack_top){
-        uintptr_t *address = (uintptr_t *)*(uintptr_t *)stack_bottom;
+        uintptr_t *address = (uintptr_t *)*stack_bottom;
         if(((uintptr_t)address % sizeof(uintptr_t)) == 0){
             if(hashset_lookup(gc.address, address)){
                 hashset_insert(roots, address);
             }
         }
-        stack_bottom += sizeof(uintptr_t);
+        stack_bottom++;
     }
 
     return roots;
@@ -193,6 +258,7 @@ void gc_mark_helper(uintptr_t *address){
     free(children);
     hashset_iterator_free(iterator);
 }
+
 
 void gc_mark(HashSet *roots){
     if(!roots) return;
