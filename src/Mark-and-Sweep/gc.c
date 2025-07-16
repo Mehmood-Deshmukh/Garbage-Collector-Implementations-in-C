@@ -445,14 +445,14 @@ void *gc_malloc(size_t size){
  *     6. free the address.
  */
 
-void gc_free(uintptr_t *address){
-    if(!address || !hashset_lookup(gc.address, address)) return;
+void gc_free(void *address){
+    if(!address || !hashset_lookup(gc.address, (uintptr_t *)address)) return;
 
-    MetaData *metadata = (MetaData *)hashmap_lookup(gc.metadata, address);
+    MetaData *metadata = (MetaData *)hashmap_lookup(gc.metadata, (uintptr_t *)address);
     if(metadata) free(metadata);
 
-    hashset_delete(gc.address, address);
-    hashmap_delete(gc.metadata, address);
+    hashset_delete(gc.address, (uintptr_t *)address);
+    hashmap_delete(gc.metadata, (uintptr_t *)address);
     free(address);
 }
 
