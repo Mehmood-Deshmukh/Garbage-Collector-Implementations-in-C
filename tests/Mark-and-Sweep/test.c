@@ -18,6 +18,9 @@ typedef struct TestObj {
 
 int main(){
     printf("Running tests...\n");
+    
+    gc_init();
+    
     printf("Test 1: Testing GC Initialization\n");
     test_gc_init();
     printf("Test 2: Testing GC Malloc\n");
@@ -43,7 +46,6 @@ void assert_equal(uintptr_t expected, uintptr_t actual, char *error_message){
 }
 
 void test_gc_init(){
-    gc_init();
     assert_equal(1, gc.address != NULL, "Address set should be initialized");
     assert_equal(1, gc.metadata != NULL, "Metadata map should be initialized");
     assert_equal(1, gc.stack_top != NULL, "Stack top should be set");
@@ -52,8 +54,6 @@ void test_gc_init(){
 }
 
 void test_gc_malloc(){
-    gc_init();
-    
     int *ptr = (int *)gc_malloc(sizeof(int));
     assert_equal(1, ptr != NULL, "Malloc should return non-NULL");
     assert_equal(1, hashset_lookup(gc.address, (uintptr_t *)ptr), "Pointer should be tracked in address set");
@@ -70,8 +70,6 @@ void test_gc_malloc(){
 }
 
 void test_gc_free(){
-    gc_init();
-    
     int *ptr = (int *)gc_malloc(sizeof(int));
     assert_equal(1, hashset_lookup(gc.address, (uintptr_t *)ptr), "Pointer should be tracked before free");
     
@@ -104,8 +102,6 @@ TestObj *getTestObjs(){
 }
 
 void test_gc_run(){
-    gc_init();
-    
     TestObj *obj1 = getTestObjs();
     
     

@@ -1,14 +1,85 @@
 **Date : 27 December 2024 03:19 PM**
+**Edit: 12 July 2025 03:27 PM**
 
-So to create a garbage collector in C, I had to go through a lot of articles related to it, and i came to the conclusion that it is not possible to create a fully functional garbage collector in C. so we will implement a conservative garbage collector.
+### What is a Garbage Collector?
+
+- A garbage collector (GC) is a form of automatic memory management that attempts to reclaim memory that was allocated by the program but is no longer referenced. 
+- In simpler terms, any memory that is no longer referenced by the program is called `garbage` and the garbage collector attempts to reclaim that memory.
+- Suppose you malloc an array of integers and forget to free it or if you make the pointer point to some other memory location, then the memory allocated for the array is no longer reachable by the program. This memory is called `garbage` and the garbage collector helps us reclaim it.
+
+Do you need it? 
+well...
+"A good programmer is someone who always frees their malloced memory" - Abhijit A.M (He is my professor who taught me a course on problem solving using procedural programming in C)
+I think we don't need it, because we are good programmers :D
+
+But I was fascinated by the idea of a garbage collector and wanted to implement one in C, because C doesn't have one. 
+
+So to create a garbage collector in C, I had to go through a lot of articles related to it, and i came to the conclusion that:
+- It is possible to create a garbage collector in C, yay! but
+- It is not possible to create a "fully functional", "general purpose" or in easy words a "full proof" garbage collector in C.
+
+great adjectives right? :D
+
+But you must have the question, why? or why not? worry not, I will give you the answer.
+
+First, we need to understand some basic concepts of garbage collection and how it works in general.
+
+Some terminologies that you should know before we start:
+- **Garbage**: Memory that is no longer referenced by the program and can be reclaimed.
+- **Root Set**: The set of objects that are guaranteed to be live, such as global variables, stack variables, and registers.
+- **Live Object**: An object that is reachable from the root set and can be accessed by the program.
+**Unreachable Object**: An object that is not reachable from the root set and can be reclaimed by the garbage collector.
+
+Most of the garbage collectors work on the principle of "tracing" the root set and finding all the reachable objects from it. This is called the **Tracing Garbage Collection**.
+You can think of it as a recursive algorithm
+
+1. start from the root set
+2. mark all the objects that are reachable from the root set
+3 recursively mark all the objects that are reachable from the marked objects
+4. continue until no more objects can be marked
+5. deallocate or "sweep" all the objects that are not marked    
+
+### Why can't we do this in C?
+
+1. No run time information
+    The requirement of a GC, is to first mark all objects in heap that are reachable from the root set and then mark all the objects reachable from those objects (in the heap).
+    This essentially requires the GC to disinguish between pointers and non-pointer data types in the heap.
+
+    **The problem**
+   - in C, the compiler does not keep metadata about which bits in memory are data types or pointers. i.e looking at a memory location, we can't tell if it is a pointer or just a integer, float, etc.
+   - At runtime, everything is just a sequence of bits  
+   ```java
+    int *ptr = malloc(sizeof(int));
+    int value = 42;
+    ```
+    - At runtime, both might have similar bit patterns, but one is a pointer and the other is an integer. 
+
+   - On the other hand in language like `Java`, every object has a header that contains metadata about the object, such as its type, size, and other information. The JVM uses this metadata to traverse the objects safely. The GC knows exactly what each memory location represents.
+
+
+2. No root set
+    - In C, we don't have a root set. The root set is the set of objects that are guaranteed to be live, such as global variables, stack variables, and registers.
+    - In C, we don't have a way to get the root set. We can only get the root set by scanning the stack and registers, which is not a trivial task. (It is architecture dependent and requires inline assembly or compiler built-ins)
+    - In languages like `Java`, the JVM keeps track of the root set and provides APIs to access it.
+
+### So what can we do?
+We can create somethign called a "conservative garbage collector".
 
 A "conservative garbage collector" is a type of garbage collector in computer science that operates with minimal information about the structure of a program's data, meaning it can reclaim memory by assuming any memory location that looks like a potential pointer is actually a pointer, even if it might not be, leading to potentially leaving some unused memory untouched to avoid mistakenly freeing memory that is still needed by the program
 
-we have a lot of tasks to do. first we need a way to scan the stack.
+we have a lot of tasks to do. first we need a way to get the root set, this inolves scanning the stack and registers. 
+
 let's start studying about it.
 
 1. Getting the stack top
-   [source](https://gcc.gnu.org/onlinedocs/gcc/Return-Address.html)
+    
+    **Some terminolgies**
+    - **Stack Frame**: when a function is called, your cpu or compiler sets up a stack frame for that function.
+    the stack frame is a chunk of memory that contains the function's local variables, return address etc.
+
+    - **frame address**: it is the base address or the starting address of the stack frame
+
+    - Here is the [source](https://gcc.gnu.org/onlinedocs/gcc/Return-Address.html)
 
    - Definition: void \*\_\_builtin_frame_address(unsigned level)
 
@@ -16,44 +87,82 @@ let's start studying about it.
        - 0 gives the frame address of the current function.
        - 1 gives the frame address of the caller of the current function.
        - 2 gives the frame address of the caller's caller, and so on.
+    
+    - What is the stack frame?
+      - stack frame means the region of the stack that holds the local variables, saved registers, return address, etc for a function call.
 
    - Why pass 1?
-     - The current function's frame (level = 0) is part of the active stack, so using it might give a value too far down the stack.
-     - The caller’s frame (level = 1) is higher up in the stack and provides a better estimate of the starting (or topmost) stack location.
+     - 0 will give the address of the current function's stack frame, which is not what we want.
+     - 1 will give the address of the caller's stack frame, which in our case will be the main function's stack frame, which is usually the entry point of the program.
+     So using 1 inside a initialization function like `gc_init()` gives us main's frame address
 
    ```c
    void *stack_top = __builtin_frame_address(1);
    ```
-
    - This code snippet gets the top of the stack by passing 1 to \_\_builtin_frame_address.
-   - The stack grows downwards, so the top of the stack is the lowest address in the stack.
 
 2. Getting the stack bottom
 
-   - I found this code on internet which uses inline assembly to get the stack bottom.
-   - I will study about it and try to understand it.
-   - I will also try to find a better way to get the stack bottom.
+   - we can get the stack bottom by calling a function, declaring a local variable, and then taking the address of that variable.
+   it will look something like this:
 
    ```c
-   uint8_t *__rsp;
-   void __read_rsp() {
-       __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp));
-   }
-   __read_rsp();
-   uint8_t *stack_bottom = __rsp;
-
-   /* or a macro */
-   #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
-   ```
+    void *stack_bottom(){
+         int local_var;
+         return &local_var;
+    }
+    ```
+    This works because the local variable will be allocated and the end of the stack
 
 3. Scanning the stack
    - Now as we have the stack top and stack bottom, we can scan the stack.
+
+okay! if you are confused about this stack part. let me explain it to you
+- The stack is a region of memory that is used to store local variables, function parameters, and return addresses.
+- The stack always grows downwards, meaning that the stack top is at a higher memory address than the stack bottom.
+It will look something like this:
+
+```
+    +-----------------------------+
+    | stack top (higher address)  |
+    +-----------------------------+
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    +-----------------------------+
+    | stack bottom (lower address)|
+    +-----------------------------+
+            grows downwards
+    ```
+
+So when you call the __builtin_frame_address(1) you get the stack top 
+
+and this is how you get the bottom:
+
+```
+    -------------------------------
+    | stack top (higher address)  |
+    -------------------------------
+    | main()                      |
+    |                             |
+    |                             |
+    |                             |
+    |                             |
+    -------------------------------
+    | gc_init()'s frame           |
+    | &a                          | <- stack_bottom
+    -------------------------------
+
 
 **Date : 4 January 2025 12:37 PM**
 
 for past few days I was studying and hence I was not able to work on the project. Now I am back to work on the project.
 
 What I think is the most crucial part of the project is to have through knowledge of garbage collection and the various algorithms used in it. I will start studying about it in more detail, though I have already read about it but I will go through it again.
+
+Now i'll write a bunch of stuff formally :D you need to bare with it.
 
 ### What is Garbage Collection?
 
@@ -72,11 +181,11 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
 ### Disadvantages of Garbage Collection
 
-- GC uses computing resources to decide which memory to free. Therefore, the penalty for the convenience of not annotating object lifetime manually in the source code is overhead, which can impair program performance.
+- we need some additional resources to keep track of the objects in memory, which can lead to increased memory usage.
 
-- The moment when the garbage is actually collected can be unpredictable, resulting in stalls (pauses to shift/free memory) scattered throughout a session. Unpredictable stalls can be unacceptable in real-time environments, in transaction processing, or in interactive programs. Incremental, concurrent, and real-time garbage collectors address these problems, with varying trade-offs.
+- The implementation i'm thinking of is called *stop the world* garbage collection, which means that the program is paused while the garbage collector is running. This can lead to performance issues in real-time applications. This is not acceptable in applications that require low latency or real-time performance.
 
-### Garbage Collection Algorithms and Strategies
+### What are the various strategies for Garbage Collection?
 
 - All the garbage collection algorithms are divided into two categories:
   - Tracing
@@ -96,17 +205,23 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
      - Incremental Garbage Collection
 
    - Also there are some implementation strategies like **Moving and Non-Moving Collectors**.
-     - When objects are freed from memory, the memory can be scattered, this can lead to fragmentation. Moving collectors move objects around in memory to avoid fragmentation.
+   - When objects are freed from memory, the memory can be scattered, this can lead to fragmentation. 
+   *fragmentation* is a situation where free memory is not contiguous, that is there are small chunks of free memory scattered throughout the heap. Suppose you want to allocate a large object, but there is no contiguous block of memory available, then you will not be able to allocate the object, even though there is enough free memory available.
+
+   - Moving collectors move objects around in memory to avoid fragmentation. (Hey guys, mehmood here from future, turns out that I implemented a moving collector too :D)
 
 2. **Reference Counting**
    - Reference counting is a simple garbage collection algorithm that works by counting the number of references to an object. When the reference count drops to zero, the object is deallocated.
    - There are a lot of disadvantages of reference counting like it can't handle circular references, it has overhead of maintaining the reference count, etc.
 
+
+After going through all these, I've decided to implement the **Mark and Sweep** algorithm, which is a tracing garbage collection algorithm. It is the simplest!
+
 ### Let's learn about Mark and Sweep Algorithm
 
 - **Mark and Sweep** is a classic garbage collection algorithm that is used to reclaim memory occupied by objects that are no longer in use by the program.
-- The algorithm consists of two phases: the mark phase and the sweep phase.
-- The mark phase identifies all objects that are reachable from the root set of objects (usually global variables, stack variables, and registers) and marks them as live.
+- The algorithm consists of two phases: the `mark` phase and the `sweep` phase.
+- The mark phase identifies all objects that are reachable from the root set of objects and marks them as live.
 - The sweep phase then scans the heap and deallocates any objects that are not marked as live.
 
 # Some important points
@@ -115,6 +230,8 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
 - To implement the tracing algorithm, we need to obtain all the pointers (childs) inside an object. Then find the pointers inside the child objects and so on, traversing the whole object graph.
 - The problem with C is that once we get a pointer, we can't tell wether it is a pointer or just a simple number.
+- I explained the problem in detail earlier, you may take a look at it once again.
+
 - So we will use an approach called the **duck test**. If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck. :) [source](https://en.wikipedia.org/wiki/Duck_test)
 - if it looks like a pointer and points to a valid memory location in the heap, then we will consider it as a pointer.
 - Now this will make our garbage collector a **conservative garbage collector**, which I mentioned in the first log.
@@ -126,7 +243,7 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 - Now, higher level languages keep a track of the roots for GC purposes, but in C, we don't have that luxury.
 
 - In C, we must manually scan the stack to find the roots.
-- additionally, some objects might be stored in registers, so we need to scan the registers as well. we can use some tricks to push the registers to the stack and then scan the stack.
+- additionally, some objects might be stored in registers, so we need to scan the registers as well. we can use some tricks to push the registers to the stack and then scan the stack. (smartly avoiding to reveal that i already know how to do it :D)
 
 **Date : 4 January 2025 02:50 PM**
 
@@ -137,6 +254,7 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
    - This will be the most important part of our implementation.
    - This will contain all the information about the object, which will be used by the garbage collector.
    - But for now for now we will just have a simple structure. This example is take from Dmitry Soshnikov's blog, with a few modifications.
+   - reference: [Dmitry Soshnikov's blog](https://dmitrysoshnikov.com/compilers/writing-a-mark-sweep-garbage-collector/)
 
    ```c
    typedef struct Traceable {
@@ -256,6 +374,10 @@ GC frees the programmer from manually de-allocating memory. This helps avoid som
 
    - This single operation will make the entire right subtree Garbage.
    - **Note** : It is garbage in a garbage collector's perspective. In pure C, it is a **memory leak.**<br>
+
+   A more formal definition of `memory leak` is : A memory leak occurs when a program allocates memory on the heap (using functions like `malloc()`, `calloc()`, or `realloc()`) but fails to free it (using `free()`), and then loses all references to that memory.
+
+
      <img src="./References/Images/02 - Garbage Right Subtree.png" width="400">
 
 3. **Custom Memory Allocator**

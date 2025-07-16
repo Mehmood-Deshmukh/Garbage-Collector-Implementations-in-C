@@ -2,7 +2,6 @@
 #include<stdlib.h>
 #include<stdint.h>
 #include "gc.h"
-
 void print_test_result(char *test_name, int result);
 void assert_equal(uintptr_t expected, uintptr_t actual, char *error_message);
 void test_gc_init();
@@ -10,14 +9,15 @@ void test_gc_malloc();
 void test_gc_free();
 void test_gc_mark_and_sweep();
 void test_gc_run();
-
 typedef struct TestObj {
     int value;
     struct TestObj* next;
 } TestObj;
-
 int main(){
     printf("Running tests...\n");
+    
+    gc_init();
+    
     printf("Test 1: Testing GC Initialization\n");
     test_gc_init();
     printf("Test 2: Testing GC Malloc\n");
@@ -29,13 +29,13 @@ int main(){
     printf("Test 5: Testing GC Run\n");
     test_gc_run();
     printf("All tests passed!\n");
+    
+    gc_run();
     return 0;
 }
-
 void print_test_result(char *test_name, int result){
     printf("%s: %s\n", test_name, result ? "PASSED" : "FAILED");
 }
-
 void assert_equal(uintptr_t expected, uintptr_t actual, char *error_message){
     if(expected != actual){
         printf("Assertion failed: %s\n", error_message);
@@ -43,17 +43,13 @@ void assert_equal(uintptr_t expected, uintptr_t actual, char *error_message){
         exit(1);
     }
 }
-
 void test_gc_init(){
-    gc_init();
     assert_equal(0, gc.total_allocated, "Total allocated should be 0");
     assert_equal((uintptr_t)NULL, (uintptr_t)gc.list_head, "List head should be NULL");
     assert_equal((uintptr_t)NULL, (uintptr_t)gc.list_tail, "List tail should be NULL");
     print_test_result("Test 1: Testing GC Initialization", 1);
 }
-
 void test_gc_malloc(){
-    gc_init();
     int *ptr = (int *)gc_malloc(sizeof(int));
     assert_equal(1, ptr != NULL, "Malloc should return non-NULL");
     assert_equal(1, hashset_lookup(gc.address, (uintptr_t *)ptr), "Pointer should be tracked");
@@ -65,13 +61,11 @@ void test_gc_malloc(){
     
     print_test_result("Test 2: Testing GC Malloc", 1);
 }
-
 void test_gc_free(){
-    gc_init();
     int *ptr = (int *)gc_malloc(sizeof(int));
     int initial_allocated = gc.total_allocated;
     
-    gc_free((uintptr_t *)ptr);
+    gc_free(ptr);
     assert_equal(0, hashset_lookup(gc.address, (uintptr_t *)ptr), "Freed pointer should not be tracked");
     assert_equal((uintptr_t)NULL, (uintptr_t)hashmap_lookup(gc.metadata, (uintptr_t *)ptr), "Metadata should be removed");
     assert_equal(1, gc.total_allocated < initial_allocated, "Total allocated should decrease");
@@ -79,10 +73,7 @@ void test_gc_free(){
     gc_free(NULL);
     print_test_result("Test 3: Testing GC Free", 1);
 }
-
-void test_gc_mark_and_sweep(){
-    gc_init();
-    
+void test_gc_mark_and_sweep(){    
     TestObj *obj1 = (TestObj *)gc_malloc(sizeof(TestObj));
     TestObj *obj2 = (TestObj *)gc_malloc(sizeof(TestObj));
     TestObj *obj3 = (TestObj *)gc_malloc(sizeof(TestObj));
@@ -128,10 +119,7 @@ void test_gc_mark_and_sweep(){
     free(roots);
     print_test_result("Test 4: Testing Mark and Sweep", 1);
 }
-
-void test_gc_run(){
-    gc_init();
-    
+void test_gc_run(){    
     TestObj *obj1 = (TestObj *)gc_malloc(sizeof(TestObj));
     TestObj *obj2 = (TestObj *)gc_malloc(sizeof(TestObj));
     TestObj *unreachable = (TestObj *)gc_malloc(sizeof(TestObj));
@@ -155,6 +143,7 @@ void test_gc_run(){
         after_gc_count++;
         temp = temp->next;
     }
+    printf("Initial count: %d, After GC count: %d\n", initial_count, after_gc_count);
     
     assert_equal(1, after_gc_count == initial_count - 1, "GC should collect unreachable objects");
     assert_equal(0, hashset_lookup(gc.address, (uintptr_t *)unreachable), "Unreachable object should be collected");
