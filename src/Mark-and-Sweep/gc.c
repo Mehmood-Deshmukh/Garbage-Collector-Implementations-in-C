@@ -136,8 +136,6 @@ HashSet *get_roots(){
  *   - This checks if the address is a valid address in the garbage collector's address set.
  *   - if it is, we insert it into the children HashSet.
  *
- *  Wooho! We have our children HashSet now!
- *
  */
 
 HashSet *get_children(uintptr_t *address){
