@@ -233,6 +233,22 @@ HashSet *get_children(uintptr_t *address){
     return children;
 }
 
+
+/* 
+ * About this function:
+ * This function is a helper function for the gc_mark function.
+ * It marks the object at the given address and recursively marks all its children.
+ * 
+ * How it works:
+ *     1. check whether the address is NULL or not in the garbage collector's address set.
+ *        if it is, return.
+ *     2. get the metadata for the address from the hashmap.
+ *        if metadata is NULL or already marked, return.
+ *     3. set the marked field of the metadata to 1, indicating that the object is reachable.
+ *     4. recursively mark the childrens of the object
+ * 
+ */  
+
 void gc_mark_helper(uintptr_t *address){
     if(!address || !hashset_lookup(gc.address, address)) return;
 
@@ -259,7 +275,21 @@ void gc_mark_helper(uintptr_t *address){
     hashset_iterator_free(iterator);
 }
 
-
+/* 
+ * About this function : 
+ * 
+ * Firstly, marking means setting the marked field of the metadata to 1. This means that
+ * the object is reachable and should not be collected by the garbage collector.
+ * 
+ * This function marks takes the set of roots as input and for each root:
+ *     1. it marks the root
+ *     2. it marks all the children of the root recursively.
+ * 
+ * This is done using the gc_mark_helper function
+ * 
+ * At the end we will end up with all the reachable objects marked. 
+ * 
+ */
 void gc_mark(HashSet *roots){
     if(!roots) return;
 
@@ -273,6 +303,18 @@ void gc_mark(HashSet *roots){
 
     hashset_iterator_free(iterator);
 }
+
+/* 
+ * About this function:
+ *
+ * This is probably the simplest yet most important function in the garbage collector.
+ * It is responsible for sweeping the memory and freeing the unmarked objects.
+ * How it works:
+ * 
+ * 1. iterate through all the addresses in the garbage collector's address set.
+ * 2  if the object is not marked, it means that it is unreachable and can be freed.
+ * 3. if the object is marked, we reset the marked field to 0, for the next garbage collection cycle.
+ */
 
 void gc_sweep(){
     HashSetIterator *iterator = hashset_iterator_create(gc.address);
@@ -293,6 +335,17 @@ void gc_sweep(){
     hashset_iterator_free(iterator);
 }
 
+/* 
+ * About this function:
+ * This is the main function that runs the garbage collector, which is accessible to the user.
+ * 
+ * It does the following:
+ *    1. Gets the roots of the garbage collector by calling get_roots function.
+ *    2. Marks all the reachable objects by calling gc_mark function.
+ *    3. Sweeps the memory and frees the unmarked objects by calling gc_sweep function.
+ * 
+ */
+
 void gc_run(){
     HashSet *roots = get_roots();
     if(!roots) return;
@@ -304,6 +357,16 @@ void gc_run(){
     free(roots);
 }
 
+/* 
+ * About this function:
+ * 
+ * I used this function for debugging purposes.
+ * It dumps the current state of the garbage collector, i.e
+ * for each address in the garbage collector's address set,
+ * it prints the address, marked status, and size of the object.
+ * 
+ * This was very useful for debugging purposes.
+ */
 void gc_dump(char *message){
     printf("%s\n\n", message);
     printf("{\n");
@@ -324,6 +387,24 @@ void gc_dump(char *message){
 
     hashset_iterator_free(iterator);
 }
+
+/* 
+ * About this function:
+ * 
+ * This is yet another function that is accessible to the user.
+ * basically its a wrapper around the malloc function.
+ * 
+ * we need to store the metadata for each object, so in our wrapper 
+ * we will allocate memory for the object and also for the metadata.
+ * and store the size and marked status in the metadata.
+ * 
+ * How it works:
+ *     1. we allocate memory for the object 
+ *     2. we also allocate memory for the metadata
+ *     3. we initialize the metadata with marked = 0 and size = size of the object
+ *     4. we insert the address of the object in the garbage collector's address set
+ *     5. we insert the metadata in the hashmap with the address as the key
+ */
 
 void *gc_malloc(size_t size){
     if(size == 0) return NULL;
@@ -349,6 +430,21 @@ void *gc_malloc(size_t size){
     return address;
 }
 
+/* 
+ * About this function:
+ * 
+ * This function frees the memory allocated for the object at the given address.
+ * It also removes the address from the garbage collector's address set and
+ * deletes the metadata associated with the object.
+ * 
+ * How it works:
+ *     1. check if the address is NULL or not in the garbage collector's address set, if it is, return.
+ *     3. get the metadata for the address from the hashmap.
+ *     4. free the metadata.
+ *     5. delete the address from the garbage collector's address set and hashmap.
+ *     6. free the address.
+ */
+
 void gc_free(uintptr_t *address){
     if(!address || !hashset_lookup(gc.address, address)) return;
 
@@ -360,7 +456,7 @@ void gc_free(uintptr_t *address){
     free(address);
 }
 
-
+/* used for debugging */
 void print_hashset(HashSet *set){
     printf("====================\n");
     HashSetIterator *iterator = hashset_iterator_create(set);
