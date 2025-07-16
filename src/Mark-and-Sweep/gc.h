@@ -65,7 +65,7 @@ extern GC gc;
 void gc_init();
 void *gc_malloc(size_t size);
 void gc_run();
-void gc_free(uintptr_t *address);
+void gc_free(void *address);
 void gc_dump(char *message);
 
 
